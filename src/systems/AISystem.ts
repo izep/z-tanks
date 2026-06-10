@@ -2,6 +2,7 @@ import { type GameState } from '../core/GameState';
 import { PhysicsSystem } from './PhysicsSystem';
 import { SoundManager } from '../core/SoundManager';
 import { TerrainSystem } from './TerrainSystem';
+import { activateShield } from '../core/WeaponData';
 
 export class AISystem {
     private physicsSystem: PhysicsSystem;
@@ -34,22 +35,14 @@ export class AISystem {
             if (decision.actions) {
                 decision.actions.forEach(action => {
                     if (action === 'shield') {
-                        // Activate Shield
-                         if ((tank.accessories['shield'] || 0) > 0 && !tank.activeShield) {
-                             tank.accessories['shield']--;
-                             tank.activeShield = 'shield';
-                             tank.shieldHealth = 20; // Default shield strength
-                             this.soundManager.playUI(); // Shield sound?
+                         if (!tank.activeShield && activateShield(tank)) {
+                             this.soundManager.playUI();
                          }
                     } else if (action === 'battery') {
                          if ((tank.accessories['battery'] || 0) > 0) {
                              tank.accessories['battery']--;
-                             tank.health = Math.min(100, tank.health + 10); // Battery heals? Or boosts power?
-                             // Original Scorched Earth: Battery increases Power limits (which we don't strictly enforce max 1000 dynamically, 
-                             // or restores health? The doc says "Restores small amount of health" but in game it extends power.
-                             // Requirements.md says: "Battery: Restores a small amount of your tank's health." 
-                             // BUT "Energy Weapons... launch attacks using power stored in batteries...".
-                             // Let's stick to Health restoration per Requirements.md description.
+                             // Batteries restore tank strength, which also raises the max-power cap
+                             tank.health = Math.min(100, tank.health + 10);
                              this.soundManager.playUI();
                          }
                     }

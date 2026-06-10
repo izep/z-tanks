@@ -9,8 +9,26 @@ export interface WeaponStats {
     // Special properties
     type?: 'missile' | 'mirv' | 'nuke' | 'dirt' | 'roller' | 'digger' | 'napalm' | 'item' | 'bouncer' | 'riot_charge' | 'sandhog' | 'dirt_destroyer' | 'liquid_dirt' | 'dirt_charge' | 'earth_disrupter' | 'plasma' | 'laser' | 'tracer' | 'smoke_tracer';
     effectValue?: number; // e.g., fuel amount, shield count
+    shieldStrength?: number; // Hit points when this shield is activated
     trailColor?: string; // For smoke tracer
     trailDuration?: number; // For smoke tracer (ms)
+}
+
+/**
+ * Activates a shield from the tank's accessories, consuming one unit.
+ * Without a preferredId, picks the strongest shield available.
+ * Returns false if no shield of the requested type is owned.
+ */
+export function activateShield(
+    tank: { accessories: Record<string, number>; activeShield?: string; shieldHealth?: number },
+    preferredId?: string
+): boolean {
+    const id = preferredId ?? ((tank.accessories['heavy_shield'] || 0) > 0 ? 'heavy_shield' : 'shield');
+    if ((tank.accessories[id] || 0) <= 0) return false;
+    tank.accessories[id]--;
+    tank.activeShield = id;
+    tank.shieldHealth = WEAPONS[id]?.shieldStrength || 200;
+    return true;
 }
 
 export const WEAPON_ORDER = [
@@ -55,6 +73,7 @@ export const WEAPON_ORDER = [
     // Items
     'fuel_can',
     'shield',
+    'heavy_shield',
     'parachute',
     'battery',
 ];
@@ -63,7 +82,7 @@ export const WEAPONS: Record<string, WeaponStats> = {
     'baby_missile': {
         name: 'Baby Missile',
         cost: 400,
-        radius: 20,
+        radius: 10,
         damage: 50,
         color: '#FFFFFF',
         description: 'Standard issue. Weak but infinite.',
@@ -72,7 +91,7 @@ export const WEAPONS: Record<string, WeaponStats> = {
     'missile': {
         name: 'Missile',
         cost: 1875,
-        radius: 40,
+        radius: 20,
         damage: 100,
         color: '#FFCC00',
         description: 'Standard explosive.',
@@ -81,7 +100,7 @@ export const WEAPONS: Record<string, WeaponStats> = {
     'nuke': {
         name: 'Nuke',
         cost: 12000,
-        radius: 120,
+        radius: 75,
         damage: 500,
         color: '#FF4400',
         description: 'Huge explosion. Dangerous.',
@@ -90,10 +109,10 @@ export const WEAPONS: Record<string, WeaponStats> = {
     'mirv': {
         name: 'MIRV',
         cost: 10000,
-        radius: 30,
+        radius: 20,
         damage: 80,
         color: '#FF00FF',
-        description: 'Splits into multiple warheads.',
+        description: 'Splits into 5 missile warheads at apogee. Fizzles if it hits first.',
         type: 'mirv',
         bundleSize: 3
     },
@@ -180,10 +199,10 @@ export const WEAPONS: Record<string, WeaponStats> = {
     'funky_bomb': {
         name: 'Funky Bomb',
         cost: 7000,
-        radius: 40,
+        radius: 80,
         damage: 150,
         color: '#00FF00',
-        description: 'Moves erratically.',
+        description: 'Multi-colored toxic chain reaction.',
         bundleSize: 2
     },
     'baby_roller': {
@@ -209,20 +228,20 @@ export const WEAPONS: Record<string, WeaponStats> = {
     'baby_nuke': {
         name: 'Baby Nuke',
         cost: 10000,
-        radius: 80,
+        radius: 40,
         damage: 200,
         color: '#FF6600',
         description: 'Smaller nuke.',
         bundleSize: 3
     },
     'death_head': {
-        name: 'Death Head',
+        name: "Death's Head",
         cost: 20000,
-        radius: 150, // Massive
-        damage: 1000,
+        radius: 35,
+        damage: 200,
         color: '#440000',
-        description: 'The ultimate weapon.',
-        type: 'mirv', // Technically behaves like huge MIRV in some versions, but standard is just massive explosion
+        description: 'Splits into 9 nuclear warheads at apogee. The ultimate weapon.',
+        type: 'mirv',
         bundleSize: 1
     },
     'digger': {
@@ -382,9 +401,22 @@ export const WEAPONS: Record<string, WeaponStats> = {
         radius: 0,
         damage: 0,
         color: '#00FFFF',
-        description: 'Protects from damage.',
+        description: 'Energy shield. Absorbs 200 damage.',
         type: 'item',
         effectValue: 1,
+        shieldStrength: 200,
+        bundleSize: 1
+    },
+    'heavy_shield': {
+        name: 'Heavy Shield',
+        cost: 30000,
+        radius: 0,
+        damage: 0,
+        color: '#0088FF',
+        description: 'Reinforced shield. Absorbs 400 damage.',
+        type: 'item',
+        effectValue: 1,
+        shieldStrength: 400,
         bundleSize: 1
     },
     'parachute': {
@@ -404,7 +436,7 @@ export const WEAPONS: Record<string, WeaponStats> = {
         radius: 0,
         damage: 0,
         color: '#FFFF00',
-        description: 'Restores 10 health points.',
+        description: 'Restores 10 health, raising max firing power. Boosts energy weapons.',
         type: 'item',
         effectValue: 10,
         bundleSize: 1

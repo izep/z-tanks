@@ -8,7 +8,7 @@
 
 **Project:** Tanks-a-Lot TS (Scorched Earth clone)  
 **Constitution:** `.specify/memory/constitution.md`  
-**Status:** 23% complete, 77% to go
+**Status:** Core gameplay complete — full arsenal, AI, economy, hotseat multiplayer. Remaining: online multiplayer, save/load (see TODO.md)
 
 ---
 

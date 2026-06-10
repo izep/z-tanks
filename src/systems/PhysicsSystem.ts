@@ -1,4 +1,4 @@
-import { type GameState, GamePhase, type ProjectileState, CONSTANTS } from '../core/GameState';
+import { type GameState, GamePhase, type ProjectileState, type TankState, CONSTANTS, ECONOMY, getMaxPower } from '../core/GameState';
 import { TerrainSystem } from './TerrainSystem';
 import { WEAPONS } from '../core/WeaponData';
 import { SoundManager } from '../core/SoundManager';
@@ -99,7 +99,8 @@ export class PhysicsSystem {
             terrainSystem: this.terrainSystem,
             soundManager: this.soundManager,
             triggerExplosion: (s, x, y, p, q) => this.triggerExplosion(s, x, y, p, q),
-            addProjectile: (p) => newQueue.push(p)
+            addProjectile: (p) => newQueue.push(p),
+            applyTankDamage: (s, t, d, a) => this.applyTankDamage(s, t, d, a)
         };
 
         state.projectiles.forEach((proj, index) => {
@@ -146,6 +147,9 @@ export class PhysicsSystem {
                     // Special Handling for Rollers (Start Rolling)
                     if (this.isRoller(proj.weaponType)) {
                         this.startRolling(proj);
+                    } else if (WEAPONS[proj.weaponType]?.type === 'mirv' && !proj.splitDone) {
+                        // MIRV/Death's Head fizzle if they hit before reaching apogee
+                        shouldRemove = true;
                     } else {
                         shouldRemove = true;
                         // Trigger Explosion
@@ -371,57 +375,15 @@ export class PhysicsSystem {
             this.terrainSystem.explode(state, x, y, radius);
         } else if (weaponStats.type === 'earth_disrupter') {
             state.terrainDirty = true;
-        } else if (weaponId === 'baby_missile') { // Leapfrog bounce explosion
-            this.terrainSystem.explode(state, x, y, 20);
-            state.explosions.push({
-                id: Math.random(),
-                x, y,
-                maxRadius: 20,
-                currentRadius: 0,
-                duration: 0.3,
-                elapsed: 0,
-                color: proj?.color || 'orange'
-            });
-            this.soundManager.playExplosion();
-            return;
         } else if (weaponStats.type === 'dirt') {
-            // Dirt bomb - check if it hit a tank directly
-            let dirtX = x;
-            let dirtY = y;
+            // Dirt is added at the impact point so repeated hits stack into mounds
+            this.terrainSystem.addTerrain(state, x, y, radius);
 
-            // If we hit a tank, we want to add dirt ON the tank.
-            // But if the tank is already covered, x,y will be the impact on the dirt mound.
-            // We should use the impact point naturally, which adds more dirt.
-            // Only if we hit the TANK collider (collisionType check?) or close enough to tank center
-            // do we maybe want to center it.
-            // The previous logic snapped to tank center if < 20.
-            // This prevented "stacking" if the mound was already 20px radius.
-            // Let's REMOVE the snapping logic so it just adds dirt where it hits.
-            // This allows stacking mounds.
-            
-            // However, if we hit the tank directly (collision), we might want to ensure the tank is covered.
-            // Check if impact is inside a tank
-            for (const tank of state.tanks) {
-                if (tank.health <= 0) continue;
-                const dx = x - tank.x;
-                const dy = y - (tank.y - TANK_CENTER_Y_OFFSET);
-                const distSq = dx * dx + dy * dy;
-                if (distSq < TANK_COLLISION_RADIUS_SQ) {
-                    // Direct hit on tank! Center it slightly?
-                    // Or just let it be. If we center it, it looks cleaner.
-                    // But if we want to pile up, maybe slight offset is good.
-                    // Let's stick to impact point for "more dirt" behavior.
-                    break;
-                }
-            }
-            
-            this.terrainSystem.addTerrain(state, dirtX, dirtY, radius);
-            
             // Add visual explosion for dirt
             state.explosions.push({
                 id: Math.random(),
-                x: dirtX,
-                y: dirtY,
+                x,
+                y,
                 maxRadius: radius * 1.2,
                 currentRadius: 0,
                 duration: 0.5,
@@ -488,35 +450,60 @@ export class PhysicsSystem {
                 const dist = Math.sqrt(dx * dx + dy * dy);
 
                 if (dist < radius + TANK_DAMAGE_RADIUS_BUFFER) {
-                    let damage = Math.floor(damageAmount * (1 - dist / (radius + TANK_DAMAGE_RADIUS_BUFFER)));
-                    damage = Math.max(0, damage); // Ensure non-negative damage
-
-                    if (damage > 0) {
-                        if (tank.activeShield && tank.shieldHealth && tank.shieldHealth > 0) {
-                            const absorbed = Math.min(damage, tank.shieldHealth);
-                            tank.shieldHealth -= absorbed;
-                            damage -= absorbed;
-                            if (tank.shieldHealth <= 0) tank.activeShield = undefined;
-                        }
-
-                        if (damage > 0) {
-                            tank.health -= damage;
-                            this.soundManager.playHit();
-                            if (tank.health <= 0) {
-                                tank.isDead = true;
-                                tank.lastWords = ["Ouch!", "Nooo!", "Darn!", "Avenge me!"][Math.floor(Math.random() * 4)];
-                                tank.sayTimer = 3;
-                            }
-                        }
-                    }
+                    const damage = Math.max(0, Math.floor(damageAmount * (1 - dist / (radius + TANK_DAMAGE_RADIUS_BUFFER))));
+                    this.applyTankDamage(state, tank, damage, proj?.ownerId);
                 }
             });
         }
     }
 
+    /**
+     * Applies damage to a tank, routing through any active shield first.
+     * Awards credits to the attacker (damage + kill bounty), excluding self-hits.
+     * Returns the health damage actually dealt after shield absorption.
+     */
+    public applyTankDamage(state: GameState, tank: TankState, damage: number, attackerId?: number): number {
+        if (damage <= 0 || tank.health <= 0) return 0;
+
+        if (tank.activeShield && tank.shieldHealth && tank.shieldHealth > 0) {
+            const absorbed = Math.min(damage, tank.shieldHealth);
+            tank.shieldHealth -= absorbed;
+            damage -= absorbed;
+            if (tank.shieldHealth <= 0) tank.activeShield = undefined;
+        }
+
+        if (damage <= 0) return 0;
+
+        const wasAlive = tank.health > 0;
+        tank.health -= damage;
+        this.soundManager.playHit();
+        if (tank.health <= 0) {
+            tank.isDead = true;
+            tank.lastWords = ["Ouch!", "Nooo!", "Darn!", "Avenge me!"][Math.floor(Math.random() * 4)];
+            tank.sayTimer = 3;
+        }
+
+        // Combat earnings (Requirements 1.1: money earned between rounds)
+        if (attackerId !== undefined && attackerId !== tank.id) {
+            const attacker = state.tanks.find(t => t.id === attackerId);
+            if (attacker) {
+                attacker.credits += damage * ECONOMY.CREDITS_PER_DAMAGE;
+                if (wasAlive && tank.health <= 0) {
+                    attacker.credits += ECONOMY.KILL_BOUNTY;
+                }
+            }
+        }
+
+        return damage;
+    }
+
     private updateTanks(state: GameState, dt: number) {
         state.tanks.forEach(tank => {
             if (tank.health <= 0) return;
+
+            // Firing power is limited by tank strength (Requirements 1.5)
+            const maxPower = getMaxPower(tank);
+            if (tank.power > maxPower) tank.power = maxPower;
 
             const groundY = this.terrainSystem.getGroundY(Math.floor(tank.x));
 
@@ -624,11 +611,23 @@ export class PhysicsSystem {
         const tank = state.tanks[state.currentPlayerIndex];
         if (!tank) return;
 
+        power = Math.min(power, getMaxPower(tank));
+
         const rad = (angle * Math.PI) / 180;
         const barrelLength = 20;
         const startX = tank.x + Math.cos(rad) * barrelLength;
         const startY = (tank.y - 12) - Math.sin(rad) * barrelLength;
         const speed = power * 0.5;
+
+        // --- Energy Weapons (battery powered, Requirements 2.1) ---
+        if (weaponId === 'laser') {
+            this.fireLaser(state, tank, angle, startX, startY);
+            return;
+        }
+        if (weaponId === 'plasma_blast') {
+            this.firePlasmaBlast(state, tank);
+            return;
+        }
 
         // --- Instant Cone Logic (Riot Weapons) ---
         if (weaponId === 'riot_charge' || weaponId === 'riot_blast') {
@@ -741,5 +740,116 @@ export class PhysicsSystem {
         }
 
         state.phase = GamePhase.PROJECTILE_FLYING;
+    }
+
+    /** Consumes up to MAX_ENERGY_BATTERIES batteries to power an energy weapon. */
+    private drawBatteries(tank: TankState): number {
+        const available = tank.accessories['battery'] || 0;
+        const used = Math.min(available, ECONOMY.MAX_ENERGY_BATTERIES);
+        if (used > 0) tank.accessories['battery'] = available - used;
+        return used;
+    }
+
+    /**
+     * Laser: instant high-intensity beam that cuts through terrain in a
+     * straight line, damaging every tank in its path. Strength scales with
+     * batteries consumed (weak without batteries).
+     */
+    private fireLaser(state: GameState, tank: TankState, angle: number, startX: number, startY: number) {
+        const batteries = this.drawBatteries(tank);
+        const damage = 25 + 45 * batteries; // 25 unpowered, 160 fully powered
+
+        const rad = (angle * Math.PI) / 180;
+        const dirX = Math.cos(rad);
+        const dirY = -Math.sin(rad);
+        const beamHalfWidth = 12;
+
+        const damaged = new Set<number>();
+        let x = startX;
+        let y = startY;
+        const step = 4;
+
+        while (x >= 0 && x <= CONSTANTS.SCREEN_WIDTH && y >= -50 && y <= CONSTANTS.SCREEN_HEIGHT) {
+            // Cut through terrain (narrow channel)
+            if (this.terrainSystem.isSolid(x, y)) {
+                this.terrainSystem.explode(state, x, y, 4);
+            }
+
+            for (const target of state.tanks) {
+                if (target.id === tank.id || target.health <= 0 || damaged.has(target.id)) continue;
+                const dx = x - target.x;
+                const dy = y - (target.y - TANK_CENTER_Y_OFFSET);
+                if (dx * dx + dy * dy < (TANK_COLLISION_RADIUS + beamHalfWidth) ** 2) {
+                    damaged.add(target.id);
+                    this.applyTankDamage(state, target, damage, tank.id);
+                }
+            }
+
+            x += dirX * step;
+            y += dirY * step;
+        }
+
+        tank.lastShotImpact = { x, y };
+
+        // Beam visual: short-lived flashes along the path
+        const beamLength = Math.sqrt((x - startX) ** 2 + (y - startY) ** 2);
+        const segments = Math.max(2, Math.floor(beamLength / 30));
+        for (let i = 0; i <= segments; i++) {
+            const t = i / segments;
+            state.explosions.push({
+                id: Math.random(),
+                x: startX + (x - startX) * t,
+                y: startY + (y - startY) * t,
+                maxRadius: 6,
+                currentRadius: 6,
+                duration: 0.25,
+                elapsed: 0,
+                color: WEAPONS['laser'].color
+            });
+        }
+
+        this.soundManager.playExplosion();
+        state.phase = GamePhase.EXPLOSION;
+        state.lastExplosionTime = performance.now();
+    }
+
+    /**
+     * Plasma Blast: expels radioactive energy radially from the tank itself.
+     * Turret direction has no effect. Radius 10-75 scaling with batteries.
+     */
+    private firePlasmaBlast(state: GameState, tank: TankState) {
+        const batteries = this.drawBatteries(tank);
+        const radius = Math.min(75, 10 + 22 * batteries);
+        const damage = 50 + 50 * batteries; // 50 unpowered, 200 fully powered
+        const cx = tank.x;
+        const cy = tank.y - TANK_CENTER_Y_OFFSET;
+
+        this.terrainSystem.explode(state, cx, cy, radius);
+
+        for (const target of state.tanks) {
+            if (target.id === tank.id || target.health <= 0) continue;
+            const dx = target.x - cx;
+            const dy = (target.y - TANK_CENTER_Y_OFFSET) - cy;
+            const dist = Math.sqrt(dx * dx + dy * dy);
+            if (dist < radius + TANK_DAMAGE_RADIUS_BUFFER) {
+                const dmg = Math.max(0, Math.floor(damage * (1 - dist / (radius + TANK_DAMAGE_RADIUS_BUFFER))));
+                this.applyTankDamage(state, target, dmg, tank.id);
+            }
+        }
+
+        state.explosions.push({
+            id: Math.random(),
+            x: cx,
+            y: cy,
+            maxRadius: radius,
+            currentRadius: 0,
+            duration: 0.5,
+            elapsed: 0,
+            color: WEAPONS['plasma_blast'].color
+        });
+
+        this.soundManager.playExplosion();
+        state.phase = GamePhase.EXPLOSION;
+        state.lastExplosionTime = performance.now();
     }
 }

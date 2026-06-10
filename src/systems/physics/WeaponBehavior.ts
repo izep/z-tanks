@@ -9,6 +9,7 @@ export interface PhysicsContext {
     soundManager: SoundManager;
     triggerExplosion: (state: GameState, x: number, y: number, proj?: any, newQueue?: any[]) => void;
     addProjectile: (proj: any) => void; // To add new projectiles (mirv, fragments)
+    applyTankDamage: (state: GameState, tank: any, damage: number, attackerId?: number) => number;
 }
 
 export interface WeaponBehavior {
@@ -52,9 +53,10 @@ export class StandardFlightBehavior implements WeaponBehavior {
                     return true; // Remove parent MIRV
                 } else if (projectile.weaponType === 'death_head') {
                     projectile.splitDone = true;
-                    const numFragments = 5;
+                    // Death's Head carries nine large-scale warheads (Requirements 2.1)
+                    const numFragments = 9;
                     for (let i = 0; i < numFragments; i++) {
-                        const spread = -100 + (i * 50);
+                        const spread = -120 + (i * 30);
                         context.addProjectile({
                             id: generateId(),
                             x: projectile.x,
@@ -331,8 +333,7 @@ export class NapalmBehavior implements WeaponBehavior {
             const dist = Math.sqrt(dx * dx + dy * dy);
 
             if (dist < 15) {
-                tank.health -= 0.5; // Burn damage
-                if (tank.health <= 0) tank.isDead = true;
+                context.applyTankDamage(state, tank, 0.5, proj.ownerId); // Burn damage
                 // Don't stop, flow through/over tank
             }
         }
@@ -657,13 +658,10 @@ export class SandhogWarheadBehavior implements WeaponBehavior {
                 const dx = proj.x - tank.x;
                 const dy = proj.y - (tank.y - 10);
                 const dist = Math.sqrt(dx * dx + dy * dy);
-                
+
                 if (dist < blastRadius + 10) {
                     const dmg = damage * (1 - dist / (blastRadius + 10));
-                    tank.health -= dmg;
-                    if (tank.health <= 0) {
-                        tank.isDead = true;
-                    }
+                    context.applyTankDamage(state, tank, dmg, proj.ownerId);
                 }
             }
 

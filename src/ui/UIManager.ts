@@ -9,6 +9,7 @@ export class UIManager {
 
     // Callbacks
     public onBuyWeapon: (weaponId: string) => void = () => { };
+    public onSellWeapon: (weaponId: string) => void = () => { };
     public onNextRound: () => void = () => { };
     public onStartGame: (config: any) => void = () => { };
     public onRestartGame: () => void = () => { };
@@ -110,55 +111,8 @@ export class UIManager {
             this.onNextRound();
         });
 
-        // Bind Action Buttons
-        /* 
-        // Disabled in favor of TouchControls.ts for D-Pad and Fire
-        // Weapon and Shield are handled by setupLongPress below
-        const keyMap: Record<string, string> = {
-            'btn-left': 'ArrowLeft',
-            'btn-right': 'ArrowRight',
-            'btn-up': 'ArrowUp',
-            'btn-down': 'ArrowDown',
-            'btn-fire': ' ', // Space
-            'btn-fire-small': ' ',
-            'btn-weapon': 'Tab',
-            // 'btn-shield': 's', // Shield binding?
-            'btn-pow-up': 'PageUp',
-            'btn-pow-down': 'PageDown'
-        };
-
-        Object.entries(keyMap).forEach(([id, key]) => {
-            const btn = document.getElementById(id);
-            if (btn) {
-                const sendKey = (type: 'keydown' | 'keyup') => {
-                    window.dispatchEvent(new KeyboardEvent(type, { key, code: key === ' ' ? 'Space' : key }));
-                };
-
-                btn.addEventListener('mousedown', () => sendKey('keydown'));
-                btn.addEventListener('mouseup', () => sendKey('keyup'));
-                btn.addEventListener('mouseleave', () => sendKey('keyup'));
-
-                btn.addEventListener('touchstart', (e) => { e.preventDefault(); sendKey('keydown'); });
-                btn.addEventListener('touchend', (e) => { e.preventDefault(); sendKey('keyup'); });
-            }
-        });
-        */
-
-        // Special mapping for Shield button if not standard key
-        document.getElementById('btn-shield')?.addEventListener('click', () => {
-            // Handled by setupLongPress now. But if we leave it here, it might duplicate.
-            // Wait, setupLongPress OVERRIDES 'onclick' or attaches new listeners?
-            // It attaches mousedown/touchstart.
-            // This existing click listener (line 148) fires on 'click'.
-            // My custom logic prevents 'click' if long-press. But 'click' event might still fire natively?
-            // My setupLongPress does NOT preventDefault on mousedown to allow focus.
-            // But it calls 'onClick()' manually if short press.
-            // If I have BOTH, I might get double events.
-            // I should REMOVE this manual listener for btn-shield here, or accept double.
-            // The old listener dispatches 's'.
-            // My new listener dispatches 's'.
-            // I will comment out this old listener.
-        });
+        // D-Pad and Fire are handled by TouchControls.ts;
+        // Weapon and Shield buttons by bindLongPressControls().
 
         // Add Enter Key Listener for Shop and Game Over
         window.addEventListener('keydown', (e) => {
@@ -187,7 +141,7 @@ export class UIManager {
             <div style="margin: 20px;">
                  <label>Rounds: <input type="number" id="setup-rounds" value="10" min="1" max="20" style="padding: 5px; width: 50px; text-align: center;"></label>
                  <br><br>
-                 <label>Borders: 
+                 <label>Borders:
                     <select id="setup-borders" style="padding: 5px;">
                         <option value="normal">Normal</option>
                         <option value="wrap">Wrap Around</option>
@@ -195,6 +149,23 @@ export class UIManager {
                         <option value="concrete">Concrete (Explode)</option>
                     </select>
                  </label>
+                 <br><br>
+                 <label>Wind:
+                    <select id="setup-wind" style="padding: 5px;">
+                        <option value="none">None</option>
+                        <option value="normal" selected>Normal</option>
+                        <option value="strong">Strong</option>
+                    </select>
+                 </label>
+                 <label style="margin-left: 15px;">Gravity:
+                    <select id="setup-gravity" style="padding: 5px;">
+                        <option value="low">Low (Moon)</option>
+                        <option value="normal" selected>Normal</option>
+                        <option value="high">High</option>
+                    </select>
+                 </label>
+                 <br><br>
+                 <label>Starting Cash: $<input type="number" id="setup-cash" value="10000" min="0" max="1000000" step="1000" style="padding: 5px; width: 90px; text-align: center;"></label>
                  <br><br>
                  <label><input type="checkbox" id="setup-test-mode"> Test Mode (100 Weapons)</label>
             </div>
@@ -286,8 +257,20 @@ export class UIManager {
 
             const testMode = (document.getElementById('setup-test-mode') as HTMLInputElement).checked;
             const borders = (document.getElementById('setup-borders') as HTMLSelectElement).value;
+            const wind = (document.getElementById('setup-wind') as HTMLSelectElement).value;
+            const gravity = (document.getElementById('setup-gravity') as HTMLSelectElement).value;
+            const startingCash = parseInt((document.getElementById('setup-cash') as HTMLInputElement).value);
 
-            const config = { playerCount: count, rounds, players, testMode, borders };
+            const config = {
+                playerCount: count,
+                rounds,
+                players,
+                testMode,
+                borders,
+                wind,
+                gravity,
+                startingCash: Number.isFinite(startingCash) ? startingCash : undefined
+            };
             this.onStartGame(config);
         });
     }
@@ -362,10 +345,17 @@ export class UIManager {
                     <div style="color: gold;">$${price}${weapon.bundleSize > 1 ? ` (x${weapon.bundleSize})` : ''}</div>
                     <div id="shop-count-${key}" style="color: white;">x0</div>
                 </div>
+                <button id="shop-sell-${key}" style="margin-top: 6px; width: 100%; padding: 3px; font-size: 11px; background: #553333; color: #ddd; border: 1px solid #775555; border-radius: 3px; cursor: pointer; display: none;">Sell 1</button>
             `;
 
             card.onclick = () => {
                 this.onBuyWeapon(key);
+            };
+
+            const sellBtn = card.querySelector(`#shop-sell-${key}`) as HTMLButtonElement;
+            sellBtn.onclick = (e) => {
+                e.stopPropagation(); // Don't trigger the buy handler
+                this.onSellWeapon(key);
             };
 
             grid.appendChild(card);
@@ -390,8 +380,17 @@ export class UIManager {
         WEAPON_ORDER.forEach(key => {
             const countEl = document.getElementById(`shop-count-${key}`);
             if (countEl) {
-                const count = tank.inventory[key] || 0;
+                const isItem = WEAPONS[key]?.type === 'item';
+                const count = key === 'fuel_can'
+                    ? tank.fuel
+                    : (isItem ? (tank.accessories[key] || 0) : (tank.inventory[key] || 0));
                 countEl.innerText = count === -1 ? 'INF' : `x${count}`;
+
+                const sellBtn = document.getElementById(`shop-sell-${key}`) as HTMLButtonElement | null;
+                if (sellBtn) {
+                    const sellable = key !== 'fuel_can' && count > 0;
+                    sellBtn.style.display = sellable ? 'block' : 'none';
+                }
             }
         });
     }
@@ -476,7 +475,7 @@ export class UIManager {
         if (!tank) return;
 
         // Show shields
-        const available = ['shield', 'super_shield'].filter(k => (tank.accessories[k] || 0) > 0);
+        const available = ['shield', 'heavy_shield'].filter(k => (tank.accessories[k] || 0) > 0);
 
         if (available.length === 0) {
             console.log("No shields available");
@@ -582,7 +581,7 @@ export class UIManager {
             }
 
             // Shield
-            const sCount = tank.accessories['shield'] || 0;
+            const sCount = (tank.accessories['shield'] || 0) + (tank.accessories['heavy_shield'] || 0);
             const sActive = tank.activeShield !== undefined;
             const shieldKey = `shield-${sCount}-${sActive}-${tank.shieldHealth ? Math.floor(tank.shieldHealth) : 0}`;
 
@@ -690,20 +689,13 @@ export class UIManager {
     }
 
     private getWeaponIconPath(id: string): string {
-        // Resolve using Vite's URL handling or absolute paths if public
-        // Assuming src/assets is copied to public or handled by Vite via imports.
-        // If 'src/assets' is not in public, direct /src links work in dev but break in prod.
-        // However, the issue described is dev mode failure.
-        // A robust way is to rely on relative paths or dynamic imports if possible.
-        // For now, let's fix the explicit mapping and path construction.
-
         let filename = `${id}.svg`;
 
         if (id === 'death_head') filename = 'deaths_head.svg';
-        else if (id === 'dirt_clod') filename = 'dirt_ball.svg';
         else if (id === 'baby_roller' || id === 'roller' || id === 'heavy_roller') filename = 'roller.svg';
         else if (id === 'leapfrog') filename = 'leap_frog.svg';
         else if (id === 'shield') return new URL('../assets/misc/shield.svg', import.meta.url).href;
+        else if (id === 'heavy_shield') return new URL('../assets/misc/heavy_shield.svg', import.meta.url).href;
         else if (id === 'parachute') return new URL('../assets/misc/parachute.svg', import.meta.url).href;
         else if (id === 'fuel_can') return new URL('../assets/misc/fuel_tank.svg', import.meta.url).href;
         else if (id === 'battery') return new URL('../assets/misc/battery.svg', import.meta.url).href;

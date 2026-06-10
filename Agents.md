@@ -117,7 +117,7 @@ npm run build
 
 This is a modern TypeScript reimplementation of Scorched Earth, the classic turn-based artillery game. The project aims to preserve the authentic gameplay while providing a smooth mobile and desktop experience.
 
-**Current Status:** ~23% complete, solid foundation in place
+**Current Status:** Core gameplay complete — full weapon arsenal, AI personalities, economy (market, interest, sell-back), hotseat multiplayer. Remaining: online multiplayer, save/load.
 
 **Architecture:** ECS-inspired with centralized GameState and stateless systems
 

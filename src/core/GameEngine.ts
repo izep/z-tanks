@@ -1,4 +1,4 @@
-import { type GameState, GamePhase, CONSTANTS } from './GameState';
+import { type GameState, GamePhase, CONSTANTS, ECONOMY } from './GameState';
 import { InputManager, GameAction } from './InputManager';
 import { TerrainSystem } from '../systems/TerrainSystem';
 import { PhysicsSystem } from '../systems/PhysicsSystem';
@@ -86,6 +86,7 @@ export class GameEngine {
 
         // UI Bindings
         this.uiManager.onBuyWeapon = (weaponId) => this.shopSystem.handleBuyWeapon(this.state, weaponId);
+        this.uiManager.onSellWeapon = (weaponId) => this.shopSystem.handleSellWeapon(this.state, weaponId);
         this.uiManager.getPrice = (weaponId) => this.economySystem.getPrice(weaponId);
         this.uiManager.onNextRound = async () => {
             if (this.shopSystem.tryNextShopTurn(this.state)) {
@@ -193,10 +194,9 @@ export class GameEngine {
                     const alive = this.state.tanks.filter(t => !t.isDead && t.health > 0);
                     if (alive.length <= 1) {
                         // Round Over
-                        // Award points/credits to winner?
                         if (alive.length === 1) {
                             const winner = alive[0];
-                            winner.credits += 1000; // Win bonus
+                            winner.credits += ECONOMY.ROUND_WIN_BONUS;
                             console.log(`Round Winner: ${winner.name}`);
                         }
 
@@ -206,6 +206,10 @@ export class GameEngine {
                             this.soundManager.playUI();
                         } else {
                             console.log("Round Over - Going to Shop");
+                            // Unspent credits accrue interest between rounds (Requirements 3.2)
+                            this.state.tanks.forEach(t => {
+                                t.credits = Math.floor(t.credits * (1 + ECONOMY.INTEREST_RATE));
+                            });
                             this.state.phase = GamePhase.SHOP;
                             this.shopSystem.applyMarketForces(); // Apply market drift
                             this.handleAiShopping();
@@ -221,18 +225,7 @@ export class GameEngine {
             }
         }
         this.gameFlowSystem.update(this.state);
-
-        // 4. Shop Phase Input
-        if (this.state.phase === GamePhase.SHOP) {
-            // Check for Enter key to proceed
-            // We can check InputManager for a generic "CONFIRM" action or just raw key?
-            // InputManager doesn't have CONFIRM. Let's use generic logic or add it.
-            // For now, let's assume if UIManager handles it via button, we are good?
-            // User specifically asked for "Press Enter" support or complained about it.
-            // Let's add a key listener in UIManager or here.
-            // Actually, best to add 'ENTER' to InputManager if we want proper handling,
-            // but for quick fix, let's just check the button click handler.
-        }
+        // Shop phase input (Enter to continue) is handled by UIManager's key listener.
     }
 
     private render() {

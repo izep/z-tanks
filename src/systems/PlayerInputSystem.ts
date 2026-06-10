@@ -1,9 +1,9 @@
-import { type GameState, CONSTANTS } from '../core/GameState';
+import { type GameState, CONSTANTS, getMaxPower } from '../core/GameState';
 import { InputManager, GameAction } from '../core/InputManager';
 import { TerrainSystem } from './TerrainSystem';
 import { PhysicsSystem } from './PhysicsSystem';
 import { SoundManager } from '../core/SoundManager';
-import { WEAPONS, WEAPON_ORDER } from '../core/WeaponData';
+import { WEAPONS, WEAPON_ORDER, activateShield } from '../core/WeaponData';
 
 /**
  * Handles input for the current player during their turn.
@@ -51,7 +51,7 @@ export class PlayerInputSystem {
             tank.angle = Math.max(0, tank.angle - 20 * dt * multiplier);
         }
         if (this.inputManager.isActionActive(GameAction.POWER_UP)) {
-            tank.power = Math.min(3000, tank.power + 100 * dt * multiplier);
+            tank.power = Math.min(getMaxPower(tank), tank.power + 100 * dt * multiplier);
         }
         if (this.inputManager.isActionActive(GameAction.POWER_DOWN)) {
             tank.power = Math.max(0, tank.power - 100 * dt * multiplier);
@@ -78,18 +78,10 @@ export class PlayerInputSystem {
 
         if (this.inputManager.isActionTriggered(GameAction.TOGGLE_SHIELD)) {
             if (tank.activeShield) {
-                console.log('Deactivating Shield');
                 tank.activeShield = undefined;
                 tank.shieldHealth = 0;
-            } else {
-                if (tank.accessories['shield'] > 0) {
-                    console.log('Activating Shield');
-                    tank.accessories['shield']--;
-                    tank.activeShield = 'shield';
-                    tank.shieldHealth = 200; // Standard shield health
-                } else {
-                    console.log('No shields!');
-                }
+            } else if (activateShield(tank)) {
+                this.soundManager.playUI();
             }
         }
 

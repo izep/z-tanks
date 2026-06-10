@@ -1,4 +1,4 @@
-import { type GameState, GamePhase, CONSTANTS } from '../core/GameState';
+import { type GameState, GamePhase, CONSTANTS, ECONOMY, rollWind } from '../core/GameState';
 import { AIController, AIPersonality } from '../core/AIController';
 import { TerrainSystem } from './TerrainSystem';
 import { SoundManager } from '../core/SoundManager';
@@ -50,7 +50,7 @@ export class GameSetupSystem {
                 hasLanded: false, // Initial fall
                 parachuteThreshold: 15,
                 isDead: false,
-                credits: 0,
+                credits: config.startingCash ?? ECONOMY.DEFAULT_STARTING_CASH,
                 currentWeapon: 'baby_missile',
                 inventory: pConfig.testMode || config.testMode ? this.getTestInventory() : { 'missile': -1, 'baby_missile': -1 },
                 accessories: { 'parachute': config.testMode ? 10 : 0 } // Give parachutes too
@@ -60,9 +60,14 @@ export class GameSetupSystem {
         state.maxRounds = config.rounds || 10;
         state.phase = GamePhase.AIMING;
         state.borderMode = config.borders || 'normal';
+        state.windSetting = config.wind || 'normal';
+
+        // Gravity setting (Requirements 3.1)
+        const gravityScale = config.gravity === 'low' ? 0.5 : (config.gravity === 'high' ? 1.5 : 1.0);
+        state.gravity = CONSTANTS.GRAVITY * gravityScale;
 
         // Initial Wind
-        state.wind = (Math.random() * 70) - 35;
+        state.wind = rollWind(state.windSetting);
         console.log(`Initial Wind: ${state.wind.toFixed(1)}`);
 
         await this.terrainSystem.generate(state);

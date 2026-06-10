@@ -73,7 +73,7 @@ describe('PhysicsSystem', () => {
             phase: GamePhase.PROJECTILE_FLYING,
             tanks: [
                 { id: 1, name: "P1", x: 100, y: 500, health: 100 } as TankState,
-                { id: 2, name: "P2", x: 420, y: 550, health: 100 } as TankState,
+                { id: 2, name: "P2", x: 410, y: 550, health: 100 } as TankState,
             ],
             projectiles: [],
             explosions: [],

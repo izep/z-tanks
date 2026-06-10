@@ -1,4 +1,4 @@
-import { type GameState, GamePhase, CONSTANTS } from '../core/GameState';
+import { type GameState, GamePhase, CONSTANTS, rollWind } from '../core/GameState';
 import { TerrainSystem } from './TerrainSystem';
 import { PhysicsSystem } from './PhysicsSystem';
 import { SoundManager } from '../core/SoundManager';
@@ -34,9 +34,8 @@ export class GameFlowSystem {
         state.phase = GamePhase.AIMING;
         state.roundNumber++;
 
-        // Randomize Wind
-        // Wind range: -35 to 35 (High impact)
-        state.wind = Math.random() * 70 - 35;
+        // Randomize Wind per the configured setting
+        state.wind = rollWind(state.windSetting);
         console.log(`Wind changed to: ${state.wind.toFixed(1)}`);
 
         await this.terrainSystem.generate(state);

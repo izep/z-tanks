@@ -105,12 +105,41 @@ export interface GameState {
   terrainDirty: boolean; // Flag to check settling
   lastExplosionTime: number;
   borderMode?: 'normal' | 'wrap' | 'bounce' | 'concrete';
+  windSetting?: WindSetting; // How wind is rolled each round
   marketState?: MarketState; // Economy system state
+}
+
+export type WindSetting = 'none' | 'normal' | 'strong';
+
+/** Rolls a new wind value for a round based on the configured setting. */
+export function rollWind(setting: WindSetting = 'normal'): number {
+  switch (setting) {
+    case 'none': return 0;
+    case 'strong': return Math.random() * 140 - 70;
+    default: return Math.random() * 70 - 35;
+  }
 }
 
 export const CONSTANTS = {
   SCREEN_WIDTH: 800,
   SCREEN_HEIGHT: 600,
   GRAVITY: 98, // Matches python 9.8 * 10
-  FPS: 60
+  FPS: 60,
+  MAX_POWER: 1000 // Max firing power at full tank strength (Requirements 1.5)
+};
+
+// Max firing power scales with tank strength: 1000 at full health.
+// Batteries restore health and therefore the power cap.
+export function getMaxPower(tank: Pick<TankState, 'health'>): number {
+  return Math.max(0, Math.min(CONSTANTS.MAX_POWER, Math.floor(tank.health * 10)));
+}
+
+export const ECONOMY = {
+  CREDITS_PER_DAMAGE: 20, // Earned per point of damage dealt to enemies
+  KILL_BOUNTY: 5000, // Earned for destroying an enemy tank
+  ROUND_WIN_BONUS: 10000, // Awarded to the last tank standing each round
+  INTEREST_RATE: 0.10, // Interest on unspent credits between rounds (Requirements 3.2)
+  DEFAULT_STARTING_CASH: 10000,
+  SELLBACK_RATIO: 0.6, // Fraction of current market price recovered when selling
+  MAX_ENERGY_BATTERIES: 3 // Batteries drawn per energy-weapon shot
 };
