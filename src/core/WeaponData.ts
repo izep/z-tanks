@@ -76,7 +76,12 @@ export const WEAPON_ORDER = [
     'heavy_shield',
     'parachute',
     'battery',
+    'heat_guidance',
+    'lazy_boy',
 ];
+
+/** Guidance accessories, strongest first (Requirements 2.2). */
+export const GUIDANCE_ORDER = ['lazy_boy', 'heat_guidance'];
 
 export const WEAPONS: Record<string, WeaponStats> = {
     'baby_missile': {
@@ -439,6 +444,28 @@ export const WEAPONS: Record<string, WeaponStats> = {
         description: 'Restores 10 health, raising max firing power. Boosts energy weapons.',
         type: 'item',
         effectValue: 10,
+        bundleSize: 1
+    },
+    'heat_guidance': {
+        name: 'Heat Guidance',
+        cost: 6000,
+        radius: 0,
+        damage: 0,
+        color: '#FF8866',
+        description: 'Steers your shot toward the nearest enemy as it descends. One per shot.',
+        type: 'item',
+        effectValue: 1,
+        bundleSize: 1
+    },
+    'lazy_boy': {
+        name: 'Lazy Boy',
+        cost: 19000,
+        radius: 0,
+        damage: 0,
+        color: '#FF44AA',
+        description: 'Full-flight homing guidance. Fire and forget. One per shot.',
+        type: 'item',
+        effectValue: 1,
         bundleSize: 1
     },
     'tracer': {

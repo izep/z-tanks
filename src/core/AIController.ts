@@ -449,6 +449,7 @@ export class AIController {
 
         // Personality Buying
         if (p === AIPersonality.CYBORG || p === AIPersonality.SPOILER) {
+            if (funds > 30000) purchases['lazy_boy'] = 1;
             if (funds > 20000) purchases['nuke'] = 2;
             else if (funds > 5000) purchases['missile'] = 10;
         } else if (p === AIPersonality.POOLSHARK) {

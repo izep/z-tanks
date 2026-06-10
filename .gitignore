@@ -24,5 +24,6 @@ dist-ssr
 *.sw?
 
 test-results/
+playwright-report/
 test-weapons-visual.mjs
 screenshots/

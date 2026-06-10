@@ -116,6 +116,16 @@ export class GameEngine {
         };
         this.uiManager.onSetWeapon = (id) => this.shopSystem.handleSetWeapon(this.state, id);
         this.uiManager.onSetShield = (id) => this.shopSystem.handleSetShield(this.state, id);
+        this.uiManager.onSetGuidance = (id) => {
+            const tank = this.state.tanks[this.state.currentPlayerIndex];
+            if (!tank) return;
+            if (id === null) {
+                tank.activeGuidance = undefined;
+            } else if ((tank.accessories[id] || 0) > 0) {
+                tank.activeGuidance = id;
+            }
+            this.soundManager.playUI();
+        };
         this.uiManager.onRestartGame = () => {
             console.log("Restarting Game...");
             this.state.phase = GamePhase.SETUP;

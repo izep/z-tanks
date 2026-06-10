@@ -198,6 +198,11 @@ body {
     border-color: rgba(255, 240, 100, 0.4);
 }
 
+.btn-green {
+    background: rgba(40, 180, 90, 0.6);
+    border-color: rgba(100, 255, 150, 0.4);
+}
+
 /* D-Pad Layout - Optimized for Thumb */
 .d-pad-grid {
     display: grid;

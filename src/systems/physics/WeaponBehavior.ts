@@ -21,6 +21,33 @@ export class StandardFlightBehavior implements WeaponBehavior {
         // Normal flying
         projectile.vx += state.wind * dt * 6;
         projectile.vy += state.gravity * dt * 10;
+
+        // Guidance systems (Requirements 2.2): steer toward the nearest enemy.
+        // Heat Guidance only corrects during descent; Lazy Boy homes all flight.
+        if (projectile.guidance) {
+            const isLazyBoy = projectile.guidance === 'lazy_boy';
+            if (isLazyBoy || projectile.vy > 0) {
+                let target: { x: number, y: number } | null = null;
+                let bestDistSq = Infinity;
+                for (const tank of state.tanks) {
+                    if (tank.id === projectile.ownerId || tank.health <= 0) continue;
+                    const dx = tank.x - projectile.x;
+                    const dy = (tank.y - 10) - projectile.y;
+                    const distSq = dx * dx + dy * dy;
+                    if (distSq < bestDistSq) {
+                        bestDistSq = distSq;
+                        target = { x: tank.x, y: tank.y - 10 };
+                    }
+                }
+                if (target && bestDistSq > 1) {
+                    const dist = Math.sqrt(bestDistSq);
+                    const strength = isLazyBoy ? 400 : 150;
+                    projectile.vx += ((target.x - projectile.x) / dist) * strength * dt;
+                    projectile.vy += ((target.y - projectile.y) / dist) * strength * dt;
+                }
+            }
+        }
+
         projectile.x += projectile.vx * dt;
         projectile.y += projectile.vy * dt;
 

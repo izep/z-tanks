@@ -38,6 +38,7 @@ export interface TankState {
   accessories: Record<string, number>; // itemId -> count
   activeShield?: string;
   shieldHealth?: number;
+  activeGuidance?: string; // Armed guidance accessory, consumed per shot
   aiController?: AIController;
   aiPersonality?: AIPersonality;
   hasLanded?: boolean;
@@ -64,6 +65,7 @@ export interface ProjectileState {
   bounces?: number;
   leapfrogStage?: number; // 0, 1, 2 for sequential warhead tracking
   color?: string;
+  guidance?: string; // Guidance system steering this projectile
   // Sandhog warhead properties
   direction?: number; // 1 or -1 for horizontal direction
   tunnelLength?: number;

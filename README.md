@@ -21,8 +21,9 @@ Tanks-a-Lot is a turn-based artillery game where players control tanks and try t
 - Hotseat Multiplayer & 8 AI personalities (Moron through Cyborg)
 - Full Scorched Earth arsenal: missiles, nukes, MIRV, Death's Head (9 warheads), rollers, diggers, sandhogs, riot weapons, dirt weapons, napalm, tracers, Funky Bomb, Leapfrog
 - Energy weapons (Laser, Plasma Blast) powered by batteries
+- Guidance systems (Heat Guidance, Lazy Boy) that steer shots toward enemies
 - Economy: dynamic market pricing, interest on unspent credits, earnings for damage and kills, and sell-back of unused gear
-- Unit Tests (Vitest)
+- Unit Tests (Vitest) and browser end-to-end tests (Playwright)
 
 ## Controls
 - **A / D**: Move Tank (consumes fuel)
@@ -55,6 +56,8 @@ Tanks-a-Lot implements the original Scorched Earth arsenal (see `Requirements.md
 - **Shield / Heavy Shield:** Absorb 200 / 400 damage before your hull takes hits.
 - **Parachute:** Saves your tank from fall damage.
 - **Battery:** Restores health, which also raises your max firing power, and powers energy weapons.
+- **Heat Guidance:** Steers your shot toward the nearest enemy as it descends. Consumed one per shot.
+- **Lazy Boy:** Full-flight homing guidance — fire and forget. Arm either via the crosshair button (click to toggle, long-press to choose).
 
 ## Economy
 
@@ -89,6 +92,15 @@ npm run preview
 ```bash
 npm test
 ```
+
+### Run End-to-End Tests (Playwright)
+```bash
+npx playwright install chromium   # first time only
+npm run test:e2e
+```
+The e2e suite launches the game in a headless browser and verifies the real
+gameplay loop: setup options, HUD, aiming/power input, weapon cycling, firing,
+turn passing, shields, and guidance systems.
 
 ## Deployment
 

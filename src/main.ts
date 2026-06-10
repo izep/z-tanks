@@ -2,7 +2,7 @@ import './style.css'
 import { GameEngine } from './core/GameEngine';
 import { TouchControls } from './ui/TouchControls';
 import { library, dom } from "@fortawesome/fontawesome-svg-core";
-import { faGear, faBolt, faBomb, faHeart, faShieldAlt, faCoins, faWind } from "@fortawesome/free-solid-svg-icons";
+import { faGear, faBolt, faBomb, faHeart, faShieldAlt, faCoins, faWind, faCrosshairs } from "@fortawesome/free-solid-svg-icons";
 import { registerSW } from 'virtual:pwa-register';
 
 // Register Service Worker
@@ -18,7 +18,7 @@ registerSW({
 });
 
 // Add icons to the library
-library.add(faGear, faBolt, faBomb, faHeart, faShieldAlt, faCoins, faWind);
+library.add(faGear, faBolt, faBomb, faHeart, faShieldAlt, faCoins, faWind, faCrosshairs);
 
 // Automatically replace <i> tags with <svg>
 dom.watch();

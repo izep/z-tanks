@@ -1,5 +1,5 @@
 import { GamePhase, type GameState } from '../core/GameState';
-import { WEAPON_ORDER, WEAPONS } from '../core/WeaponData';
+import { WEAPON_ORDER, WEAPONS, GUIDANCE_ORDER } from '../core/WeaponData';
 
 export class UIManager {
     private container: HTMLElement;
@@ -58,6 +58,10 @@ export class UIManager {
             <span class="stat-label"><i class="fa-solid fa-wind"></i> Wind</span>
             <span class="stat-value" id="p-wind">0.0</span>
         </div>
+        <div class="stat-row" id="row-guidance" style="display: none;">
+            <span class="stat-label"><i class="fa-solid fa-crosshairs"></i> Guidance</span>
+            <span class="stat-value" id="p-guidance">-</span>
+        </div>
       </div>
       
       <!-- ... Center Message ... -->
@@ -88,6 +92,9 @@ export class UIManager {
         </div>
         <div class="btn-circle btn-blue" id="btn-shield" title="Shield">
             <i class="fa-solid fa-shield-alt" style="font-size:32px;"></i>
+        </div>
+        <div class="btn-circle btn-green" id="btn-guidance" title="Guidance">
+            <i class="fa-solid fa-crosshairs" style="font-size:32px;"></i>
         </div>
       </div>
       
@@ -452,6 +459,30 @@ export class UIManager {
         }, () => {
             this.showShieldSelector();
         });
+
+        // Guidance: Click -> Toggle (strongest owned), Long -> Menu
+        this.setupLongPress('btn-guidance', () => {
+            const tank = this.getTank();
+            if (!tank) return;
+            if (tank.activeGuidance) {
+                this.onSetGuidance(null); // Disarm
+            } else {
+                const best = GUIDANCE_ORDER.find(id => (tank.accessories[id] || 0) > 0);
+                if (best) this.onSetGuidance(best);
+            }
+        }, () => {
+            this.showGuidanceSelector();
+        });
+    }
+
+    private showGuidanceSelector() {
+        const tank = this.getTank();
+        if (!tank) return;
+
+        const available = GUIDANCE_ORDER.filter(k => (tank.accessories[k] || 0) > 0);
+        if (available.length === 0) return;
+
+        this.renderSelector(available, (id) => this.onSetGuidance(id));
     }
 
     private showWeaponSelector() {
@@ -637,6 +668,40 @@ export class UIManager {
                 this._domCache['p-weapon'] = weaponId;
             }
 
+            // Guidance HUD row + button state
+            const gOwned = GUIDANCE_ORDER.reduce((sum, id) => sum + (tank.accessories[id] || 0), 0);
+            const gActive = tank.activeGuidance;
+            const guidanceKey = `${gOwned}-${gActive || 'off'}`;
+            if (this._domCache['guidance-key'] !== guidanceKey) {
+                this._domCache['guidance-key'] = guidanceKey;
+
+                const row = document.getElementById('row-guidance');
+                if (row) {
+                    if (gOwned <= 0 && !gActive) {
+                        row.style.display = 'none';
+                    } else {
+                        row.style.display = 'flex';
+                        const valEl = document.getElementById('p-guidance')!;
+                        if (gActive) {
+                            valEl.innerText = `${WEAPONS[gActive]?.name || gActive} (ON)`;
+                            valEl.style.color = '#66FF99';
+                        } else {
+                            valEl.innerText = `Off (x${gOwned})`;
+                            valEl.style.color = 'white';
+                        }
+                    }
+                }
+
+                const btnGuidance = document.getElementById('btn-guidance');
+                if (btnGuidance) {
+                    const usable = gOwned > 0 || !!gActive;
+                    btnGuidance.style.opacity = usable ? '1' : '0.3';
+                    btnGuidance.style.filter = usable ? 'none' : 'grayscale(100%)';
+                    btnGuidance.style.cursor = usable ? 'pointer' : 'default';
+                    btnGuidance.style.boxShadow = gActive ? '0 0 12px #66FF99' : 'none';
+                }
+            }
+
             // Shield Button State
             const btnShieldKey = `btn-shield-${sCount > 0 || sActive}`;
             if (this._domCache['btn-shield'] !== btnShieldKey) {
@@ -696,6 +761,8 @@ export class UIManager {
         else if (id === 'leapfrog') filename = 'leap_frog.svg';
         else if (id === 'shield') return new URL('../assets/misc/shield.svg', import.meta.url).href;
         else if (id === 'heavy_shield') return new URL('../assets/misc/heavy_shield.svg', import.meta.url).href;
+        else if (id === 'heat_guidance') return new URL('../assets/misc/heat_guidance.svg', import.meta.url).href;
+        else if (id === 'lazy_boy') return new URL('../assets/misc/lazy_boy.svg', import.meta.url).href;
         else if (id === 'parachute') return new URL('../assets/misc/parachute.svg', import.meta.url).href;
         else if (id === 'fuel_can') return new URL('../assets/misc/fuel_tank.svg', import.meta.url).href;
         else if (id === 'battery') return new URL('../assets/misc/battery.svg', import.meta.url).href;
@@ -712,5 +779,6 @@ export class UIManager {
         if (this.onSetShield) this.onSetShield(id);
     }
     public onSetShield: (id: string) => void = () => { };
+    public onSetGuidance: (id: string | null) => void = () => { };
 }
 // End of UIManager

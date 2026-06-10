@@ -2,7 +2,7 @@ import { type GameState } from '../core/GameState';
 import { PhysicsSystem } from './PhysicsSystem';
 import { SoundManager } from '../core/SoundManager';
 import { TerrainSystem } from './TerrainSystem';
-import { activateShield } from '../core/WeaponData';
+import { activateShield, GUIDANCE_ORDER } from '../core/WeaponData';
 
 export class AISystem {
     private physicsSystem: PhysicsSystem;
@@ -47,6 +47,11 @@ export class AISystem {
                          }
                     }
                 });
+            }
+
+            // Arm guidance if owned (consumed by fireProjectile)
+            if (!tank.activeGuidance) {
+                tank.activeGuidance = GUIDANCE_ORDER.find(id => (tank.accessories[id] || 0) > 0);
             }
 
             // Fire

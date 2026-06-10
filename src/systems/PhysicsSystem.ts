@@ -704,6 +704,16 @@ export class PhysicsSystem {
             return;
         }
 
+        // Armed guidance is consumed one unit per shot (Requirements 2.2)
+        let guidance: string | undefined;
+        if (tank.activeGuidance && (tank.accessories[tank.activeGuidance] || 0) > 0) {
+            guidance = tank.activeGuidance;
+            tank.accessories[guidance]--;
+            if (tank.accessories[guidance] <= 0) {
+                tank.activeGuidance = undefined; // Supply exhausted
+            }
+        }
+
         const projectile: ProjectileState = {
             id: generateId(),
             x: startX,
@@ -713,7 +723,8 @@ export class PhysicsSystem {
             weaponType: weaponId,
             ownerId: tank.id,
             elapsedTime: 0,
-            trail: []
+            trail: [],
+            guidance
         };
         state.projectiles.push(projectile);
 

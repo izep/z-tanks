@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm test *)",
+      "Bash(npm run typecheck)",
+      "Bash(npm run test:ci)",
+      "Bash(npx tsc --noEmit *)",
+      "mcp__Claude_Preview__preview_screenshot"
+    ]
+  }
+}
