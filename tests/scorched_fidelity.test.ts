@@ -178,13 +178,13 @@ describe('Scorched Earth fidelity', () => {
     });
 
     describe('Max power cap (Requirements 1.5)', () => {
-        it('caps at 1000 for a full-strength tank', () => {
-            expect(getMaxPower({ health: 100 })).toBe(1000);
-            expect(getMaxPower({ health: 150 })).toBe(1000);
+        it('caps at 10000 for a full-strength tank', () => {
+            expect(getMaxPower({ health: 100 })).toBe(10000);
+            expect(getMaxPower({ health: 150 })).toBe(10000);
         });
 
         it('scales down with damage', () => {
-            expect(getMaxPower({ health: 50 })).toBe(500);
+            expect(getMaxPower({ health: 50 })).toBe(5000);
             expect(getMaxPower({ health: 0 })).toBe(0);
         });
 
@@ -193,21 +193,21 @@ describe('Scorched Earth fidelity', () => {
             const state = makeState([tank]);
             state.phase = GamePhase.AIMING;
 
-            physics.fireProjectile(state, 1000, 0, 'baby_missile');
+            physics.fireProjectile(state, 10000, 0, 'baby_missile');
 
             expect(state.projectiles.length).toBe(1);
-            // Speed = power * 0.5; clamped power = 500 -> vx = 250 at angle 0
-            expect(state.projectiles[0].vx).toBeCloseTo(250, 0);
+            // Speed = power * 0.5; clamped power = 5000 -> vx = 2500 at angle 0
+            expect(state.projectiles[0].vx).toBeCloseTo(2500, 0);
         });
 
         it('reduces stored power when tank takes damage', () => {
-            const tank = makeTank({ health: 100, power: 1000 });
+            const tank = makeTank({ health: 100, power: 10000 });
             const state = makeState([tank]);
 
             tank.health = 40;
             physics.update(state, 0.016);
 
-            expect(tank.power).toBeLessThanOrEqual(400);
+            expect(tank.power).toBeLessThanOrEqual(4000);
         });
     });
 

@@ -78,19 +78,19 @@ describe('Save/Load (Requirements 8.4)', () => {
 
     it('saves during stable phases and reports hasSave', () => {
         expect(saveSystem.hasSave()).toBe(false);
-        expect(saveSystem.save(makeState(), terrainStub, economy)).toBe(true);
+        expect(saveSystem.saveSync(makeState(), terrainStub, economy)).toBe(true);
         expect(saveSystem.hasSave()).toBe(true);
     });
 
     it('refuses to save mid-flight', () => {
         const state = makeState({ phase: GamePhase.PROJECTILE_FLYING });
-        expect(saveSystem.save(state, terrainStub, economy)).toBe(false);
+        expect(saveSystem.saveSync(state, terrainStub, economy)).toBe(false);
         expect(saveSystem.hasSave()).toBe(false);
     });
 
     it('round-trips full game state', async () => {
         const original = makeState();
-        saveSystem.save(original, terrainStub, economy);
+        saveSystem.saveSync(original, terrainStub, economy);
 
         const fresh = makeState({
             tanks: [], roundNumber: 1, wind: 0, currentPlayerIndex: 0,
@@ -115,7 +115,7 @@ describe('Save/Load (Requirements 8.4)', () => {
     });
 
     it('rebuilds AI controllers on load', async () => {
-        saveSystem.save(makeState(), terrainStub, economy);
+        saveSystem.saveSync(makeState(), terrainStub, economy);
 
         const fresh = makeState({ tanks: [] });
         await saveSystem.load(fresh, terrainStub, economy);
@@ -130,7 +130,7 @@ describe('Save/Load (Requirements 8.4)', () => {
     it('restores market prices', async () => {
         for (let i = 0; i < 5; i++) economy.updatePrice('missile', true);
         const inflated = economy.getPrice('missile');
-        saveSystem.save(makeState(), terrainStub, economy);
+        saveSystem.saveSync(makeState(), terrainStub, economy);
 
         const freshEconomy = new EconomySystem('low');
         await saveSystem.load(makeState({ tanks: [] }), terrainStub, freshEconomy);
@@ -139,7 +139,7 @@ describe('Save/Load (Requirements 8.4)', () => {
     });
 
     it('clear removes the save', () => {
-        saveSystem.save(makeState(), terrainStub, economy);
+        saveSystem.saveSync(makeState(), terrainStub, economy);
         saveSystem.clear();
         expect(saveSystem.hasSave()).toBe(false);
     });
