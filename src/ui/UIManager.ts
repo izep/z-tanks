@@ -178,6 +178,7 @@ export class UIManager {
             </div>
 
             <button id="btn-start-game" style="padding: 10px 20px; font-size: 20px; cursor: pointer;">START GAME</button>
+            <button id="btn-continue-game" style="display: none; margin-left: 15px; padding: 10px 20px; font-size: 20px; cursor: pointer; background: #2a6; color: white; border: 1px solid #4c8;">CONTINUE SAVED GAME</button>
         `;
         this.container.appendChild(setupDiv);
         this.setupContainer = setupDiv;
@@ -242,6 +243,10 @@ export class UIManager {
         // Init
         updatePlayerRows();
 
+        document.getElementById('btn-continue-game')?.addEventListener('click', () => {
+            this.onContinueGame();
+        });
+
         document.getElementById('btn-start-game')?.addEventListener('click', () => {
             // Read config
             const count = parseInt((document.getElementById('setup-p-count') as HTMLInputElement).value);
@@ -299,6 +304,12 @@ export class UIManager {
             if (hud) hud.style.display = 'none';
             if (controlsLeft) controlsLeft.style.display = 'none';
             if (controlsRight) controlsRight.style.display = 'none';
+
+            // Offer to resume a saved game (Requirements 8.4)
+            const continueBtn = document.getElementById('btn-continue-game');
+            if (continueBtn) {
+                continueBtn.style.display = this.hasSavedGame() ? 'inline-block' : 'none';
+            }
         } else {
             this.shopContainer!.style.display = 'none';
             this.setupContainer!.style.display = 'none';
@@ -774,6 +785,8 @@ export class UIManager {
         if (this.onSetWeapon) this.onSetWeapon(id);
     }
     public onSetWeapon: (id: string) => void = () => { };
+    public onContinueGame: () => void = () => { };
+    public hasSavedGame: () => boolean = () => false;
 
     private triggerShieldSelect(id: string) {
         if (this.onSetShield) this.onSetShield(id);

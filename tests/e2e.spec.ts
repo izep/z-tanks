@@ -205,6 +205,41 @@ test.describe('Guidance systems', () => {
     });
 });
 
+test.describe('Save / Load', () => {
+    test('autosaves on game start and resumes after a reload', async ({ page }) => {
+        await startTwoHumanGame(page);
+
+        // The SETUP -> AIMING transition triggers the first autosave
+        const hasSave = await page.evaluate(() => (window as any).game.saveSystem.hasSave());
+        expect(hasSave).toBe(true);
+
+        // Make the state distinctive, then persist it
+        await page.evaluate(() => {
+            const game = (window as any).game;
+            game.state.tanks[0].credits = 77777;
+            game.state.roundNumber = 4;
+            game.saveSystem.save(game.state, game.terrainSystem, game.economySystem);
+        });
+
+        // Fresh page load: the setup screen offers to continue
+        await page.reload();
+        await expect(page.locator('#btn-continue-game')).toBeVisible();
+        await page.locator('#btn-continue-game').click();
+
+        await expect.poll(() => getPhase(page)).toBe('AIMING');
+        const snapshot = await page.evaluate(() => {
+            const s = (window as any).game.state;
+            return { credits: s.tanks[0].credits, round: s.roundNumber, tankCount: s.tanks.length };
+        });
+        expect(snapshot.credits).toBe(77777);
+        expect(snapshot.round).toBe(4);
+        expect(snapshot.tankCount).toBe(2);
+
+        // HUD reflects the restored game
+        await expect(page.locator('#p-credits')).toHaveText('77777');
+    });
+});
+
 test.describe('Shield', () => {
     test('S activates a shield from inventory', async ({ page }) => {
         await startTwoHumanGame(page);

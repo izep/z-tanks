@@ -652,6 +652,40 @@ export class TerrainSystem {
         return anyMoved;
     }
 
+    /** Snapshot of the terrain as a PNG data URL (mask is rebuilt from alpha on load). */
+    public serialize(): string {
+        return this.canvas.toDataURL('image/png');
+    }
+
+    /** Restores terrain from a serialize() snapshot. */
+    public loadFromDataURL(dataUrl: string): Promise<boolean> {
+        return new Promise((resolve) => {
+            const img = new Image();
+            img.onload = () => {
+                this.ctx.clearRect(0, 0, this.width, this.height);
+                this.ctx.globalCompositeOperation = 'source-over';
+                this.ctx.drawImage(img, 0, 0);
+
+                // Rebuild mask from alpha, same threshold as PNG map loading
+                this.terrainMask.fill(0);
+                const imageData = this.ctx.getImageData(0, 0, this.width, this.height);
+                const data = imageData.data;
+                for (let i = 0; i < this.width * this.height; i++) {
+                    if (data[i * 4 + 3] > 20) {
+                        this.terrainMask[i] = 1;
+                    }
+                }
+
+                this.syncFromCanvas(0, 0, this.width, this.height);
+                this.recalculateHeightMap();
+                this.dirtyColumns.clear();
+                resolve(true);
+            };
+            img.onerror = () => resolve(false);
+            img.src = dataUrl;
+        });
+    }
+
     /**
      * Checks if a point in the terrain is solid.
      */

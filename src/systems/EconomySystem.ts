@@ -80,4 +80,17 @@ export class EconomySystem {
     public getMarketState(): Readonly<MarketState> {
         return this.marketState;
     }
+
+    /** Restores market state from a saved game. */
+    public restoreMarketState(saved: MarketState): void {
+        // Keep base prices authoritative from WeaponData; restore dynamics
+        this.marketState.volatility = saved.volatility;
+        for (const itemId in this.marketState.basePrices) {
+            if (saved.currentPrices[itemId] !== undefined) {
+                this.marketState.currentPrices[itemId] = saved.currentPrices[itemId];
+            }
+            this.marketState.purchaseCount[itemId] = saved.purchaseCount[itemId] || 0;
+            this.marketState.salesCount[itemId] = saved.salesCount[itemId] || 0;
+        }
+    }
 }

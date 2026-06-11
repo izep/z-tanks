@@ -11,6 +11,7 @@ import { AISystem } from '../systems/AISystem';
 import { ShopSystem } from '../systems/ShopSystem';
 import { GameFlowSystem } from '../systems/GameFlowSystem';
 import { EconomySystem } from '../systems/EconomySystem';
+import { SaveSystem } from '../systems/SaveSystem';
 import { 
     DefaultBorderStrategy, 
     WrapBorderStrategy, 
@@ -37,6 +38,8 @@ export class GameEngine {
     public shopSystem: ShopSystem;
     public gameFlowSystem: GameFlowSystem;
     public economySystem: EconomySystem;
+    public saveSystem: SaveSystem;
+    private lastSavePhase: GamePhase | null = null;
 
     constructor(canvas: HTMLCanvasElement) {
         this.canvas = canvas;
@@ -78,6 +81,7 @@ export class GameEngine {
         );
         this.aiSystem = new AISystem(this.physicsSystem, this.soundManager, this.terrainSystem);
         this.economySystem = new EconomySystem('low');
+        this.saveSystem = new SaveSystem();
         this.shopSystem = new ShopSystem(this.soundManager, this.economySystem);
         this.gameFlowSystem = new GameFlowSystem(this.terrainSystem, this.physicsSystem, this.soundManager);
 
@@ -97,21 +101,17 @@ export class GameEngine {
         };
         this.uiManager.onStartGame = async (config) => {
             await this.gameSetupSystem.handleStartGame(this.state, config);
-            
-            // Set Border Strategy
-            switch (config.borders) {
-                case 'wrap':
-                    this.physicsSystem.setBorderStrategy(new WrapBorderStrategy());
-                    break;
-                case 'bounce':
-                    this.physicsSystem.setBorderStrategy(new BounceBorderStrategy());
-                    break;
-                case 'concrete':
-                    this.physicsSystem.setBorderStrategy(new ConcreteBorderStrategy());
-                    break;
-                default:
-                    this.physicsSystem.setBorderStrategy(new DefaultBorderStrategy());
-                    break;
+            this.applyBorderMode(config.borders);
+        };
+        this.uiManager.hasSavedGame = () => this.saveSystem.hasSave();
+        this.uiManager.onContinueGame = async () => {
+            const ok = await this.saveSystem.load(this.state, this.terrainSystem, this.economySystem);
+            if (ok) {
+                this.applyBorderMode(this.state.borderMode || 'normal');
+                this.lastSavePhase = this.state.phase;
+                this.soundManager.playUI();
+            } else {
+                console.warn('Could not load saved game');
             }
         };
         this.uiManager.onSetWeapon = (id) => this.shopSystem.handleSetWeapon(this.state, id);
@@ -236,6 +236,33 @@ export class GameEngine {
         }
         this.gameFlowSystem.update(this.state);
         // Shop phase input (Enter to continue) is handled by UIManager's key listener.
+
+        // Autosave on entering a stable phase; clear the save once the game ends
+        if (this.state.phase !== this.lastSavePhase) {
+            this.lastSavePhase = this.state.phase;
+            if (this.state.phase === GamePhase.AIMING || this.state.phase === GamePhase.SHOP) {
+                this.saveSystem.save(this.state, this.terrainSystem, this.economySystem);
+            } else if (this.state.phase === GamePhase.GAME_OVER) {
+                this.saveSystem.clear();
+            }
+        }
+    }
+
+    private applyBorderMode(mode?: string) {
+        switch (mode) {
+            case 'wrap':
+                this.physicsSystem.setBorderStrategy(new WrapBorderStrategy());
+                break;
+            case 'bounce':
+                this.physicsSystem.setBorderStrategy(new BounceBorderStrategy());
+                break;
+            case 'concrete':
+                this.physicsSystem.setBorderStrategy(new ConcreteBorderStrategy());
+                break;
+            default:
+                this.physicsSystem.setBorderStrategy(new DefaultBorderStrategy());
+                break;
+        }
     }
 
     private render() {

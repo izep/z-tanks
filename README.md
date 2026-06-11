@@ -23,6 +23,7 @@ Tanks-a-Lot is a turn-based artillery game where players control tanks and try t
 - Energy weapons (Laser, Plasma Blast) powered by batteries
 - Guidance systems (Heat Guidance, Lazy Boy) that steer shots toward enemies
 - Economy: dynamic market pricing, interest on unspent credits, earnings for damage and kills, and sell-back of unused gear
+- Save/Load: the game autosaves every turn; resume from the setup screen with "Continue Saved Game"
 - Unit Tests (Vitest) and browser end-to-end tests (Playwright)
 
 ## Controls
