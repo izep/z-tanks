@@ -52,10 +52,10 @@ export class PlayerInputSystem {
             tank.angle = Math.max(0, tank.angle - 20 * dt * multiplier);
         }
         if (this.inputManager.isActionActive(GameAction.POWER_UP)) {
-            tank.power = Math.min(getMaxPower(tank), tank.power + 100 * dt * multiplier);
+            tank.power = Math.min(getMaxPower(tank), tank.power + 1000 * dt * multiplier);
         }
         if (this.inputManager.isActionActive(GameAction.POWER_DOWN)) {
-            tank.power = Math.max(0, tank.power - 100 * dt * multiplier);
+            tank.power = Math.max(0, tank.power - 1000 * dt * multiplier);
         }
 
         if (this.inputManager.isActionTriggered(GameAction.NEXT_WEAPON)) {
@@ -74,7 +74,6 @@ export class PlayerInputSystem {
                 count++;
             }
             tank.currentWeapon = WEAPON_ORDER[nextIdx];
-            console.log('Switched to', tank.currentWeapon);
         }
 
         if (this.inputManager.isActionTriggered(GameAction.TOGGLE_SHIELD)) {
@@ -100,15 +99,9 @@ export class PlayerInputSystem {
         if (this.inputManager.isActionTriggered(GameAction.USE_BATTERY)) {
             if ((tank.accessories['battery'] || 0) > 0 && tank.health < 100) {
                 const restoreAmount = WEAPONS['battery'].effectValue || 10;
-                const oldHealth = tank.health;
                 tank.health = Math.min(100, tank.health + restoreAmount);
                 tank.accessories['battery']--;
-                console.log(`Battery used! Health: ${oldHealth} -> ${tank.health}`);
                 this.soundManager.playUI();
-            } else if (tank.health >= 100) {
-                console.log('Health already full!');
-            } else {
-                console.log('No batteries!');
             }
         }
 

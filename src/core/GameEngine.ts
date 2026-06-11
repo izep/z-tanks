@@ -1,7 +1,7 @@
 import { type GameState, GamePhase, CONSTANTS, ECONOMY, PLAY_PHASES } from './GameState';
 import { InputManager, GameAction } from './InputManager';
 import { TerrainSystem } from '../systems/TerrainSystem';
-import { PhysicsSystem } from '../systems/PhysicsSystem';
+import { PhysicsSystem, resetIdCounter } from '../systems/PhysicsSystem';
 import { UIManager } from '../ui/UIManager';
 import { SoundManager } from './SoundManager';
 import { RenderSystem } from '../systems/RenderSystem';
@@ -24,6 +24,7 @@ export class GameEngine {
     // private ctx: CanvasRenderingContext2D; // Moved to RenderSystem
     private isRunning: boolean = false;
     private lastTime: number = 0;
+    private boundGameLoop: (ts: number) => void;
 
     public state: GameState;
     public inputManager: InputManager;
@@ -43,6 +44,7 @@ export class GameEngine {
 
     constructor(canvas: HTMLCanvasElement) {
         this.canvas = canvas;
+        this.boundGameLoop = this.gameLoop.bind(this);
         // this.ctx = canvas.getContext('2d')!;
         this.inputManager = new InputManager();
 
@@ -100,6 +102,7 @@ export class GameEngine {
             }
         };
         this.uiManager.onStartGame = async (config) => {
+            resetIdCounter(); // Fresh IDs for each new game session
             await this.gameSetupSystem.handleStartGame(this.state, config);
             this.applyBorderMode(config.borders);
             this.economySystem.setVolatility(config.volatility || 'low');
@@ -175,7 +178,7 @@ export class GameEngine {
     public start() {
         this.isRunning = true;
         this.lastTime = performance.now();
-        requestAnimationFrame(this.gameLoop.bind(this));
+        requestAnimationFrame(this.boundGameLoop);
     }
 
     private gameLoop(timestamp: number) {
@@ -187,7 +190,7 @@ export class GameEngine {
         this.update(dt);
         this.render();
 
-        requestAnimationFrame(this.gameLoop.bind(this));
+        requestAnimationFrame(this.boundGameLoop);
     }
 
     private update(dt: number) {
@@ -225,8 +228,7 @@ export class GameEngine {
                 
                 // Only handle phase transition if we're in TERRAIN_SETTLING phase
                 if (!moved && this.state.phase === GamePhase.TERRAIN_SETTLING) {
-                    // Settling done
-                    console.log("Settling done, calling nextTurn");
+                    // Settling done — check win condition before advancing turn
 
                     // Check Win Condition before next turn
                     const alive = this.state.tanks.filter(t => !t.isDead && t.health > 0);
@@ -235,19 +237,18 @@ export class GameEngine {
                         if (alive.length === 1) {
                             const winner = alive[0];
                             winner.credits += ECONOMY.ROUND_WIN_BONUS;
-                            console.log(`Round Winner: ${winner.name}`);
                         }
 
                         if (this.state.roundNumber >= this.state.maxRounds) {
-                            console.log("Game Over - Max rounds reached");
                             this.state.phase = GamePhase.GAME_OVER;
                             this.soundManager.playUI();
                         } else {
-                            console.log("Round Over - Going to Shop");
-                            // Unspent credits accrue interest between rounds (Requirements 3.2)
+                            // Unspent credits accrue interest between rounds for living tanks (Requirements 3.2)
                             const interestRate = this.state.interestRate ?? ECONOMY.INTEREST_RATE;
                             this.state.tanks.forEach(t => {
-                                t.credits = Math.floor(t.credits * (1 + interestRate));
+                                if (!t.isDead && t.health > 0) {
+                                    t.credits = Math.floor(t.credits * (1 + interestRate));
+                                }
                             });
                             this.state.phase = GamePhase.SHOP;
                             this.shopSystem.applyMarketForces(); // Apply market drift

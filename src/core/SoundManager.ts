@@ -12,6 +12,7 @@ export class SoundManager {
     private masterGain: GainNode;
     private musicGain: GainNode;
     private settings: AudioSettings;
+    private noiseBufferCache: Map<number, AudioBuffer> = new Map();
 
     // Music sequencer state
     private musicTimer: ReturnType<typeof setInterval> | null = null;
@@ -96,10 +97,15 @@ export class SoundManager {
     // --- Sound effects ---
 
     private noiseBuffer(duration: number): AudioBuffer {
+        // Round to 2 decimal places to get cache hits for near-identical durations
+        const key = Math.round(duration * 100);
+        const cached = this.noiseBufferCache.get(key);
+        if (cached) return cached;
         const size = Math.max(1, Math.floor(this.ctx.sampleRate * duration));
         const buffer = this.ctx.createBuffer(1, size, this.ctx.sampleRate);
         const data = buffer.getChannelData(0);
         for (let i = 0; i < size; i++) data[i] = Math.random() * 2 - 1;
+        this.noiseBufferCache.set(key, buffer);
         return buffer;
     }
 

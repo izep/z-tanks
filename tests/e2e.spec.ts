@@ -39,7 +39,7 @@ test.describe('App shell', () => {
 
         await page.goto('/');
 
-        await expect(page).toHaveTitle(/Tanks-a-Lot TS/);
+        await expect(page).toHaveTitle(/Z-Tanks/);
         await expect(page.locator('#game-canvas')).toBeVisible();
         await expect(page.locator('#ui-layer')).toBeVisible();
         await expect(page.locator('#menu-layer')).toBeVisible();
@@ -162,7 +162,7 @@ test.describe('Aiming controls', () => {
         expect(powerAfter).toBeLessThan(powerBefore);
     });
 
-    test('power can never exceed the 1000 cap', async ({ page }) => {
+    test('power can never exceed the 10000 cap', async ({ page }) => {
         await startTwoHumanGame(page);
 
         // Hold power-up well past the cap
@@ -171,7 +171,7 @@ test.describe('Aiming controls', () => {
         await page.keyboard.up('ArrowUp');
 
         const power = await page.evaluate(() => (window as any).game.state.tanks[0].power);
-        expect(power).toBeLessThanOrEqual(1000);
+        expect(power).toBeLessThanOrEqual(10000);
     });
 
     test('Tab cycles to the next weapon', async ({ page }) => {
@@ -267,12 +267,12 @@ test.describe('Save / Load', () => {
         const hasSave = await page.evaluate(() => (window as any).game.saveSystem.hasSave());
         expect(hasSave).toBe(true);
 
-        // Make the state distinctive, then persist it
+        // Make the state distinctive, then persist it synchronously
         await page.evaluate(() => {
             const game = (window as any).game;
             game.state.tanks[0].credits = 77777;
             game.state.roundNumber = 4;
-            game.saveSystem.save(game.state, game.terrainSystem, game.economySystem);
+            game.saveSystem.saveSync(game.state, game.terrainSystem, game.economySystem);
         });
 
         // Fresh page load: the main menu offers to continue

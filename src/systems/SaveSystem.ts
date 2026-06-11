@@ -40,6 +40,56 @@ export class SaveSystem {
         // Only persist stable phases; mid-flight state is not resumable
         if (state.phase !== GamePhase.AIMING && state.phase !== GamePhase.SHOP) return false;
 
+        // Snapshot all the cheap/serialisable parts synchronously so we capture
+        // the current state, then defer the expensive PNG encode + localStorage
+        // write to an idle callback so it never blocks the render loop.
+        const stateSnapshot = {
+            phase: state.phase,
+            tanks: state.tanks.map(t => this.sanitizeTank(t)),
+            currentPlayerIndex: state.currentPlayerIndex,
+            roundNumber: state.roundNumber,
+            maxRounds: state.maxRounds,
+            wind: state.wind,
+            gravity: state.gravity,
+            terrainDirty: false,
+            lastExplosionTime: 0,
+            borderMode: state.borderMode,
+            windSetting: state.windSetting,
+            armsLevel: state.armsLevel,
+            interestRate: state.interestRate,
+            talkingTanks: state.talkingTanks
+        };
+        const marketSnapshot = structuredClone(economy.getMarketState());
+
+        const doWrite = () => {
+            try {
+                const saved: SavedGame = {
+                    version: SAVE_VERSION,
+                    savedAt: Date.now(),
+                    state: stateSnapshot,
+                    terrain: terrain.serialize(), // canvas.toDataURL — expensive, now off hot path
+                    market: marketSnapshot,
+                };
+                localStorage.setItem(SAVE_KEY, JSON.stringify(saved));
+            } catch (e) {
+                console.warn('Failed to save game:', e);
+            }
+        };
+
+        if (typeof requestIdleCallback !== 'undefined') {
+            requestIdleCallback(doWrite, { timeout: 2000 });
+        } else {
+            setTimeout(doWrite, 0);
+        }
+        return true;
+    }
+
+    /**
+     * Synchronous save for testing and explicit flush scenarios.
+     * Bypasses the idle-callback deferral so the write is immediate.
+     */
+    public saveSync(state: GameState, terrain: TerrainSystem, economy: EconomySystem): boolean {
+        if (state.phase !== GamePhase.AIMING && state.phase !== GamePhase.SHOP) return false;
         try {
             const saved: SavedGame = {
                 version: SAVE_VERSION,
@@ -61,7 +111,7 @@ export class SaveSystem {
                     talkingTanks: state.talkingTanks
                 },
                 terrain: terrain.serialize(),
-                market: JSON.parse(JSON.stringify(economy.getMarketState()))
+                market: structuredClone(economy.getMarketState()),
             };
             localStorage.setItem(SAVE_KEY, JSON.stringify(saved));
             return true;

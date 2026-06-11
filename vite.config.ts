@@ -2,7 +2,7 @@ import { defineConfig } from 'vite';
 import { VitePWA } from 'vite-plugin-pwa';
 
 export default defineConfig({
-    base: '/tanks-ts/',
+    base: '/z-tanks/',
     clearScreen: false,
     server: {
         port: 5174
@@ -18,10 +18,10 @@ export default defineConfig({
     plugins: [
         VitePWA({
             registerType: 'autoUpdate',
-            includeAssets: ['favicon.ico', 'favicon.svg', 'tanks.png'],
+            includeAssets: ['favicon.ico', 'favicon.svg', 'z-logo.svg', 'tanks.png'],
             manifest: {
-                name: 'Tanks-a-Lot TS',
-                short_name: 'TanksTS',
+                name: 'Z-Tanks',
+                short_name: 'Z-Tanks',
                 description: 'A TypeScript port of the classic tank artillery game.',
                 theme_color: '#242424',
                 background_color: '#242424',

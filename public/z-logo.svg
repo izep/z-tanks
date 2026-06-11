@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="200" height="200">
+  <defs>
+    <linearGradient id="zGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#4040e0;stop-opacity:1" />
+      <stop offset="40%" style="stop-color:#1ebfe0;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#00d4a0;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="zGradInner" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#2020a0;stop-opacity:1" />
+      <stop offset="40%" style="stop-color:#0090b0;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#00a870;stop-opacity:1" />
+    </linearGradient>
+    <filter id="glow">
+      <feGaussianBlur stdDeviation="3" result="coloredBlur"/>
+      <feMerge>
+        <feMergeNode in="coloredBlur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+  <!-- Outer Z shape -->
+  <path d="M 30 28 L 170 28 L 170 55 L 80 148 L 170 148 L 170 172 L 30 172 L 30 145 L 120 52 L 30 52 Z"
+        fill="url(#zGrad)" filter="url(#glow)" />
+  <!-- Inner Z (echo/depth effect) -->
+  <path d="M 48 46 L 148 46 L 148 65 L 72 138 L 148 138 L 148 155 L 48 155 L 48 136 L 124 63 L 48 63 Z"
+        fill="url(#zGradInner)" opacity="0.7" />
+  <!-- Innermost Z (triple Z effect) -->
+  <path d="M 64 62 L 130 62 L 130 78 L 82 126 L 130 126 L 130 138 L 64 138 L 64 122 L 112 76 L 64 76 Z"
+        fill="url(#zGrad)" opacity="0.45" />
+</svg>

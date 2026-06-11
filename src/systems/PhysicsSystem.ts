@@ -22,9 +22,12 @@ import {
     type PhysicsContext
 } from './physics/WeaponBehavior';
 
-// Simple, fast ID generator for particles and projectiles
+// Simple, fast ID generator for particles and projectiles.
+// Using a closure so the counter is scoped to this module instance and resets
+// cleanly on Vite HMR without leaking into other module instances.
 let nextId = 0;
 export const generateId = () => (nextId++).toString();
+export const resetIdCounter = () => { nextId = 0; };
 
 // Tank collision constants
 const TANK_COLLISION_RADIUS = 15;
@@ -389,7 +392,7 @@ export class PhysicsSystem {
 
             // Add visual explosion for dirt
             state.explosions.push({
-                id: Math.random(),
+                id: nextId++,
                 x,
                 y,
                 maxRadius: radius * 1.2,
@@ -438,7 +441,7 @@ export class PhysicsSystem {
         // Add visual explosion 
         if (weaponId !== 'digger') {
             state.explosions.push({
-                id: Math.random(),
+                id: nextId++,
                 x, y,
                 maxRadius: radius * (weaponId === 'nuke' ? 1.5 : 1.2),
                 currentRadius: 0,
@@ -521,10 +524,10 @@ export class PhysicsSystem {
                 tank.isFalling = true;
                 tank.vy += state.gravity * dt;
 
-                // Parachute Logic
+                // Parachute Logic: auto-deploy when falling fast (consumes one unit here)
                 if (tank.hasLanded && !tank.isParachuteDeployed && (tank.accessories['parachute'] || 0) > 0 && tank.vy > 150) {
                     tank.isParachuteDeployed = true;
-                    tank.accessories['parachute']--;
+                    tank.accessories['parachute']--;  // consumed on deploy
                 }
 
                 if (tank.isParachuteDeployed) {
@@ -548,23 +551,24 @@ export class PhysicsSystem {
 
                     let finalDamage = 0;
                     if (tank.isParachuteDeployed) {
+                        // Parachute was already consumed at deploy time; no extra deduction here
                         tank.isParachuteDeployed = false;
                     } else {
                         const rawDamage = Math.max(0, (tank.vy - 100) / 5);
                         finalDamage = Math.floor(rawDamage);
-                    }
 
-                    if (finalDamage > 0) {
-                        if ((tank.accessories['parachute'] || 0) > 0 && finalDamage >= (tank.parachuteThreshold || 15)) {
+                        // Last-chance parachute catch (no parachute was auto-deployed mid-fall)
+                        if (finalDamage > 0 && (tank.accessories['parachute'] || 0) > 0 && finalDamage >= (tank.parachuteThreshold || 15)) {
                             tank.accessories['parachute']--;
                             finalDamage = 0;
                         }
-
-                        if (finalDamage > 0) {
-                            tank.health -= finalDamage;
-                            if (tank.health <= 0) tank.isDead = true;
-                        }
                     }
+
+                    if (finalDamage > 0) {
+                        tank.health -= finalDamage;
+                        if (tank.health <= 0) tank.isDead = true;
+                    }
+
                     tank.vy = 0;
                     tank.isFalling = false;
                     tank.isParachuteDeployed = false;
@@ -581,19 +585,16 @@ export class PhysicsSystem {
     }
 
     private updateExplosions(state: GameState, dt: number) {
-        const toRemove: number[] = [];
-        state.explosions.forEach((exp, i) => {
+        let writeIdx = 0;
+        for (let i = 0; i < state.explosions.length; i++) {
+            const exp = state.explosions[i];
             exp.elapsed += dt;
             exp.currentRadius = exp.maxRadius * (exp.elapsed / exp.duration);
-
-            if (exp.elapsed >= exp.duration) {
-                toRemove.push(i);
+            if (exp.elapsed < exp.duration) {
+                state.explosions[writeIdx++] = exp;
             }
-        });
-
-        for (let i = toRemove.length - 1; i >= 0; i--) {
-            state.explosions.splice(toRemove[i], 1);
         }
+        state.explosions.length = writeIdx;
 
         if (state.phase === GamePhase.EXPLOSION && state.explosions.length === 0) {
             state.phase = GamePhase.TERRAIN_SETTLING;
@@ -602,15 +603,13 @@ export class PhysicsSystem {
     }
 
     public nextTurn(state: GameState) {
-        const alive = state.tanks.filter(t => t.health > 0);
-        if (alive.length <= 1) {
-            state.phase = GamePhase.SHOP;
-            return;
-        }
-
+        // Win condition is checked by GameEngine after TERRAIN_SETTLING completes.
+        // nextTurn is only called when alive.length > 1, so we only need to advance the player index.
         let nextIdx = (state.currentPlayerIndex + 1) % state.tanks.length;
+        let guard = 0;
         while (state.tanks[nextIdx].health <= 0) {
             nextIdx = (nextIdx + 1) % state.tanks.length;
+            if (++guard >= state.tanks.length) break; // safety: all dead (shouldn't happen here)
         }
         state.currentPlayerIndex = nextIdx;
         state.phase = GamePhase.AIMING;

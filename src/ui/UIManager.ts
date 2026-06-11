@@ -7,6 +7,11 @@ export class UIManager {
     private setupContainer: HTMLDivElement | null = null;
     private lastPhase: GamePhase | null = null;
 
+    // Shop element caches (populated once when grid is built)
+    private shopCountEls: Map<string, HTMLElement> = new Map();
+    private shopSellBtns: Map<string, HTMLButtonElement> = new Map();
+    private shopBuiltForArmsLevel: number = -1;
+
     // Callbacks
     public onBuyWeapon: (weaponId: string) => void = () => { };
     public onSellWeapon: (weaponId: string) => void = () => { };
@@ -147,7 +152,7 @@ export class UIManager {
         setupDiv.id = 'setup-layer';
         setupDiv.style.cssText = 'display: none; position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: #222; color: white; padding: 40px; text-align: center; pointer-events: auto; z-index: 2000;';
         setupDiv.innerHTML = `
-            <h1>Setup Game</h1>
+            <h1>Z-Tanks Setup</h1>
             <div style="margin: 20px;">
                 <label>Player Count: <input type="number" id="setup-p-count" value="2" min="2" max="6" style="padding: 5px; width: 50px; text-align: center;"></label>
             </div>
@@ -225,7 +230,8 @@ export class UIManager {
         menuDiv.id = 'menu-layer';
         menuDiv.style.cssText = 'display: none; position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: linear-gradient(to bottom, #0a0a1a 0%, #1a1a2e 60%, #3d2b1f 100%); color: white; text-align: center; pointer-events: auto; z-index: 2500; flex-direction: column; align-items: center; justify-content: center;';
         menuDiv.innerHTML = `
-            <h1 style="font-size: 56px; color: gold; margin-bottom: 4px; text-shadow: 3px 3px 0 #5c3a00, 6px 6px 12px rgba(0,0,0,0.8);">TANKS-A-LOT</h1>
+            <div style="margin-bottom: 8px;"><img src="/z-logo.svg" alt="Z-Tanks" style="width: 100px; height: 100px; filter: drop-shadow(0 0 16px #1ebfe0);"></div>
+            <h1 style="font-size: 56px; background: linear-gradient(135deg, #4040e0 0%, #1ebfe0 40%, #00d4a0 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; margin-bottom: 4px; text-shadow: none; font-weight: 900; letter-spacing: 2px;">Z-TANKS</h1>
             <div style="color: #aaa; margin-bottom: 40px; letter-spacing: 3px;">A SCORCHED EARTH TRIBUTE</div>
             <button id="btn-menu-new" class="menu-btn" style="display: block; width: 280px; margin: 8px auto; padding: 14px; font-size: 20px; cursor: pointer; background: gold; color: black; border: none; border-radius: 6px; font-weight: bold;">NEW GAME</button>
             <button id="btn-menu-continue" class="menu-btn" style="display: none; width: 280px; margin: 8px auto; padding: 14px; font-size: 20px; cursor: pointer; background: #2a6; color: white; border: 1px solid #4c8; border-radius: 6px; font-weight: bold;">CONTINUE SAVED GAME</button>
@@ -508,8 +514,15 @@ export class UIManager {
     }
 
     private buildShopGrid() {
+        const armsLevel = this._lastState?.armsLevel ?? 4;
+        // Only rebuild if arms level changed (weapons available differ between game configs)
+        if (this.shopBuiltForArmsLevel === armsLevel) return;
+        this.shopBuiltForArmsLevel = armsLevel;
+
         const grid = document.getElementById('shop-grid')!;
         grid.innerHTML = ''; // Clear
+        this.shopCountEls.clear();
+        this.shopSellBtns.clear();
 
         const categoryHeaders: Record<string, string> = {
             'baby_missile': 'Standard Weapons',
@@ -520,8 +533,6 @@ export class UIManager {
             'fuel_can': 'Items & Accessories'
         };
 
-        const armsLevel = this._lastState?.armsLevel ?? 4;
-
         WEAPON_ORDER.forEach(key => {
             // Arms level restriction (Requirements 2.3)
             if (getArmsLevel(key) > armsLevel) return;
@@ -531,7 +542,7 @@ export class UIManager {
                 const header = document.createElement('h3');
                 header.textContent = categoryHeaders[key];
                 header.style.gridColumn = '1 / -1'; // Span full width
-                header.style.color = '#gold';
+                header.style.color = 'gold';
                 header.style.borderBottom = '1px solid #444';
                 header.style.paddingBottom = '5px';
                 header.style.marginTop = '20px';
@@ -570,6 +581,11 @@ export class UIManager {
             };
 
             grid.appendChild(card);
+
+            // Cache element references to avoid getElementById on every frame
+            const countEl = document.getElementById(`shop-count-${key}`);
+            if (countEl) this.shopCountEls.set(key, countEl);
+            this.shopSellBtns.set(key, sellBtn);
         });
     }
 
@@ -577,30 +593,35 @@ export class UIManager {
         const tank = state.tanks[state.currentPlayerIndex];
         if (!tank) return;
 
-        // Header
-        const statusDiv = document.getElementById('shop-player-status')!;
-        statusDiv.innerHTML = `
-            <span style="font-size: 20px; color: ${tank.color}">${tank.name}</span>
-            <span style="float: right; color: gold;">Credits: $${tank.credits}</span>
-        `;
+        // Header — only rewrite when player or credits change
+        const shopHeaderKey = `${tank.name}-${tank.credits}`;
+        if (this._domCache['shop-header'] !== shopHeaderKey) {
+            this._domCache['shop-header'] = shopHeaderKey;
+            const statusDiv = document.getElementById('shop-player-status')!;
+            statusDiv.innerHTML = `
+                <span style="font-size: 20px; color: ${tank.color}">${tank.name}</span>
+                <span style="float: right; color: gold;">Credits: $${tank.credits}</span>
+            `;
+            const btn = document.getElementById('btn-next-round') as HTMLButtonElement;
+            btn.innerText = "Done Shopping / Next Round";
+        }
 
-        const btn = document.getElementById('btn-next-round') as HTMLButtonElement;
-        btn.innerText = "Done Shopping / Next Round";
-
-        // Update quantities
+        // Update quantities — use cached element refs, skip getElementById
         WEAPON_ORDER.forEach(key => {
-            const countEl = document.getElementById(`shop-count-${key}`);
+            const countEl = this.shopCountEls.get(key);
             if (countEl) {
                 const isItem = WEAPONS[key]?.type === 'item';
                 const count = key === 'fuel_can'
                     ? tank.fuel
                     : (isItem ? (tank.accessories[key] || 0) : (tank.inventory[key] || 0));
-                countEl.innerText = count === -1 ? 'INF' : `x${count}`;
+                const countText = count === -1 ? 'INF' : `x${count}`;
+                if (countEl.innerText !== countText) countEl.innerText = countText;
 
-                const sellBtn = document.getElementById(`shop-sell-${key}`) as HTMLButtonElement | null;
+                const sellBtn = this.shopSellBtns.get(key);
                 if (sellBtn) {
                     const sellable = key !== 'fuel_can' && count > 0;
-                    sellBtn.style.display = sellable ? 'block' : 'none';
+                    const display = sellable ? 'block' : 'none';
+                    if (sellBtn.style.display !== display) sellBtn.style.display = display;
                 }
             }
         });

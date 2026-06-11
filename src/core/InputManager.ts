@@ -67,7 +67,7 @@ export class InputManager {
         window.addEventListener('keyup', (e) => {
             const tag = (e.target as HTMLElement).tagName;
             if (tag === 'INPUT' || tag === 'SELECT' || tag === 'TEXTAREA') {
-                this.keysHeld.delete(e.key); // Ensure key release is tracked if held during focus switch? relative minor
+                this.keysHeld.delete(e.key);
                 return;
             }
 
@@ -77,6 +77,12 @@ export class InputManager {
                 e.preventDefault();
                 this.activeActions.delete(action);
             }
+        });
+
+        // Clear all held inputs when window loses focus to prevent phantom stuck keys
+        window.addEventListener('blur', () => {
+            this.activeActions.clear();
+            this.keysHeld.clear();
         });
     }
 

@@ -61,6 +61,11 @@ export class RenderSystem {
     }
 
     public render(state: GameState) {
+        // Pre-compute time values used across multiple per-frame operations
+        const now = Date.now();
+        const timeSec = now / 1000;
+        const shieldPulse = 0.5 + 0.5 * Math.sin(timeSec * 3);
+
         // 1. Sky
         this.ctx.fillStyle = '#87CEEB';
         this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
@@ -71,14 +76,14 @@ export class RenderSystem {
         // 3. Smoke Trails (persistent)
         if (state.smokeTrails && state.smokeTrails.length > 0) {
             state.smokeTrails.forEach(trail => {
-                this.drawSmokeTrail(trail);
+                this.drawSmokeTrail(trail, now);
             });
         }
 
         // 4. Tanks (always visible on top of terrain)
         state.tanks.forEach(tank => {
             if (tank.health > 0) {
-                this.drawTankSprite(tank);
+                this.drawTankSprite(tank, timeSec, shieldPulse);
             }
         });
 
@@ -135,7 +140,7 @@ export class RenderSystem {
         return this.tankSpriteCache[key];
     }
 
-    private drawTankSprite(tank: TankState) {
+    private drawTankSprite(tank: TankState, timeSec: number, shieldPulse: number) {
         const sprites = this.getTankSprites(tank.color, tank.variant);
 
         // Ideally wait for load, but data URIs / Blob URLs might be fast enough
@@ -179,11 +184,9 @@ export class RenderSystem {
         // Active Shield - Enhanced visibility
         if (tank.activeShield && tank.shieldHealth && tank.shieldHealth > 0) {
             const shieldAlpha = Math.min(1.0, tank.shieldHealth / 200);
-            const time = Date.now() / 1000;
-            const pulse = 0.5 + 0.5 * Math.sin(time * 3);
 
             this.ctx.save();
-            this.ctx.globalAlpha = 0.3 + 0.2 * pulse * shieldAlpha;
+            this.ctx.globalAlpha = 0.3 + 0.2 * shieldPulse * shieldAlpha;
 
             // Outer shield glow
             this.ctx.strokeStyle = '#00FFFF';
@@ -206,7 +209,7 @@ export class RenderSystem {
             this.ctx.globalAlpha = 0.5 * shieldAlpha;
             this.ctx.fillStyle = '#00FFFF';
             for (let i = 0; i < 6; i++) {
-                const angle = (i * Math.PI / 3) + time;
+                const angle = (i * Math.PI / 3) + timeSec;
                 const x = 22 * Math.cos(angle);
                 const y = -10 + 22 * Math.sin(angle);
                 this.ctx.beginPath();
@@ -370,10 +373,9 @@ export class RenderSystem {
         this.ctx.restore();
     }
 
-    private drawSmokeTrail(trail: import('../core/GameState').SmokeTrailState) {
+    private drawSmokeTrail(trail: import('../core/GameState').SmokeTrailState, now: number) {
         if (trail.points.length < 2) return;
         
-        const now = Date.now();
         const age = now - trail.createdAt;
         const fadeProgress = age / trail.duration;
         const opacity = Math.max(0, 1 - fadeProgress);

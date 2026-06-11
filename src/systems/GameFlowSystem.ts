@@ -26,7 +26,6 @@ export class GameFlowSystem {
         // Start next round
 
         if (state.roundNumber >= state.maxRounds) {
-            console.log('Max rounds reached - Game Over');
             state.phase = GamePhase.GAME_OVER;
             this.soundManager.playUI();
             return;
@@ -37,11 +36,10 @@ export class GameFlowSystem {
 
         // Randomize Wind per the configured setting
         state.wind = rollWind(state.windSetting);
-        console.log(`Wind changed to: ${state.wind.toFixed(1)}`);
 
         await this.terrainSystem.generate(state);
 
-        // Reset positions
+        // Reset positions and vital stats for the new round
         const sectionWidth = CONSTANTS.SCREEN_WIDTH / state.tanks.length;
         state.tanks.forEach((t, i) => {
             t.x = sectionWidth * i + sectionWidth / 2;
@@ -49,6 +47,7 @@ export class GameFlowSystem {
             t.health = 100;
             t.isDead = false;
             t.hasLanded = false; // Reset land status
+            t.fuel = 250;        // Restore fuel each round
         });
 
         state.currentPlayerIndex = 0;

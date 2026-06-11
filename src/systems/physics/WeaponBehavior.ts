@@ -140,8 +140,7 @@ export class LeapfrogBehavior implements WeaponBehavior {
                 if (tank.health <= 0) continue;
                 const dx = projectile.x - tank.x;
                 const dy = projectile.y - (tank.y - 10);
-                const dist = Math.sqrt(dx * dx + dy * dy);
-                if (dist < 15) {
+                if (dx * dx + dy * dy < 225) { // 15² = 225
                     hit = true;
                     break;
                 }
@@ -357,9 +356,8 @@ export class NapalmBehavior implements WeaponBehavior {
             if (tank.health <= 0) continue;
             const dx = proj.x - tank.x;
             const dy = proj.y - (tank.y - 10);
-            const dist = Math.sqrt(dx * dx + dy * dy);
 
-            if (dist < 15) {
+            if (dx * dx + dy * dy < 225) { // 15² = 225
                 context.applyTankDamage(state, tank, 0.5, proj.ownerId); // Burn damage
                 // Don't stop, flow through/over tank
             }
@@ -543,9 +541,8 @@ export class DiggingBehavior implements WeaponBehavior {
         proj.vx += state.wind * dt * 0.1;
         proj.vy += state.gravity * dt * 10;
 
-        // Add weaving noise
-        const time = performance.now() / 100;
-        proj.vx += Math.sin(time) * 50 * dt;
+        // Add weaving noise using accumulated elapsed time (avoids expensive performance.now())
+        proj.vx += Math.sin(proj.elapsedTime * 10) * 50 * dt;
 
         proj.x += proj.vx * dt;
         proj.y += proj.vy * dt;
@@ -576,9 +573,8 @@ export class SandhogBehavior implements WeaponBehavior {
         proj.vx += state.wind * dt * 0.1;
         proj.vy += state.gravity * dt * 10;
 
-        // Add weaving noise
-        const time = performance.now() / 100;
-        proj.vx += Math.cos(time) * 50 * dt;
+        // Add weaving noise using accumulated elapsed time (avoids expensive performance.now())
+        proj.vx += Math.cos(proj.elapsedTime * 10) * 50 * dt;
 
         proj.x += proj.vx * dt;
         proj.y += proj.vy * dt;

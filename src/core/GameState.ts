@@ -145,13 +145,13 @@ export const CONSTANTS = {
   SCREEN_HEIGHT: 600,
   GRAVITY: 98, // Matches python 9.8 * 10
   FPS: 60,
-  MAX_POWER: 1000 // Max firing power at full tank strength (Requirements 1.5)
+  MAX_POWER: 10000 // Max firing power at full tank strength (Requirements 1.5)
 };
 
 // Max firing power scales with tank strength: 1000 at full health.
 // Batteries restore health and therefore the power cap.
 export function getMaxPower(tank: Pick<TankState, 'health'>): number {
-  return Math.max(0, Math.min(CONSTANTS.MAX_POWER, Math.floor(tank.health * 10)));
+  return Math.max(0, Math.min(CONSTANTS.MAX_POWER, Math.floor(tank.health * 100)));
 }
 
 export const ECONOMY = {

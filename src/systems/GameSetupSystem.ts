@@ -1,9 +1,8 @@
 import { type GameState, GamePhase, CONSTANTS, ECONOMY, rollWind } from '../core/GameState';
 import { AIController, AIPersonality } from '../core/AIController';
-import { activateShield } from '../core/WeaponData';
+import { activateShield, WEAPON_ORDER } from '../core/WeaponData';
 import { TerrainSystem } from './TerrainSystem';
 import { SoundManager } from '../core/SoundManager';
-import { WEAPONS, WEAPON_ORDER } from '../core/WeaponData';
 
 /**
  * Auto Defense (Requirements 2.2): tanks that own one automatically raise
@@ -51,7 +50,7 @@ export class GameSetupSystem {
                 y: 100, // Will fall
                 vy: 0,
                 angle: 90,
-                power: 600,
+                power: 5000,
                 health: 100,
                 fuel: 250,
                 color: colors[i % colors.length],
@@ -84,7 +83,6 @@ export class GameSetupSystem {
 
         // Initial Wind
         state.wind = rollWind(state.windSetting);
-        console.log(`Initial Wind: ${state.wind.toFixed(1)}`);
 
         await this.terrainSystem.generate(state);
         applyAutoDefense(state);
@@ -94,12 +92,7 @@ export class GameSetupSystem {
     private getTestInventory(): Record<string, number> {
         const inv: Record<string, number> = {};
         WEAPON_ORDER.forEach(w => {
-            const stats = WEAPONS[w];
-            if (stats.cost === 0) {
-                inv[w] = -1;
-            } else {
-                inv[w] = 100;
-            }
+            inv[w] = -1; // Infinite ammo for all weapons in test mode
         });
         return inv;
     }

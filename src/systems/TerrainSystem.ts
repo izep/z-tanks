@@ -276,18 +276,30 @@ export class TerrainSystem {
         // Use custom palette or default
         const activePalette = palette || this.PALETTE;
 
-        console.log(`Loading MTN: ${filename}, Width: ${fileWidth}, Offset: ${pixelDataOffset}, Palette: ${palette ? 'Custom' : 'Default'}`);
+        // Pre-parse palette entries into [r,g,b] tuples once (avoids string parsing per pixel)
+        const paletteRgb: [number, number, number][] = activePalette.map(s => {
+            // Handles both 'rgb(r, g, b)' and '#RRGGBB' formats
+            if (s.startsWith('#')) {
+                const hex = s.slice(1);
+                return [
+                    parseInt(hex.slice(0, 2), 16),
+                    parseInt(hex.slice(2, 4), 16),
+                    parseInt(hex.slice(4, 6), 16),
+                ] as [number, number, number];
+            }
+            const m = s.match(/\d+/g)!;
+            return [parseInt(m[0]), parseInt(m[1]), parseInt(m[2])] as [number, number, number];
+        });
 
         // Parse Column-Major Data
         // Each column is terminated by 0x00 BYTE
         // Pixels are 4-bit packed (High-Low)
-
         const pixels = data.subarray(pixelDataOffset);
-
-        // Center the mountain
         const offsetX = Math.floor((this.width - fileWidth) / 2);
 
-        this.ctx.globalCompositeOperation = 'source-over';
+        // Use a single ImageData write instead of per-pixel fillRect calls
+        const imageData = this.ctx.getImageData(0, 0, this.width, this.height);
+        const buf = imageData.data; // Uint8ClampedArray, row-major RGBA
 
         let ptr = 0;
         for (let x = 0; x < fileWidth; x++) {
@@ -301,30 +313,34 @@ export class TerrainSystem {
             }
             if (ptr < pixels.length) ptr++; // Skip 0x00
 
-            // Decode pixels (High -> Low)
-            const colPixels: number[] = [];
+            const canvasX = offsetX + x;
+            if (canvasX < 0 || canvasX >= this.width) continue;
+
+            // Decode pixels bottom-up (High nibble first)
+            let row = 0;
             for (const b of colBytes) {
-                colPixels.push((b >> 4) & 0x0F);
-                colPixels.push(b & 0x0F);
-            }
+                const hi = (b >> 4) & 0x0F;
+                const lo = b & 0x0F;
 
-            // Draw Bottom-Up
-            const startY = this.height - 1;
-
-            for (let i = 0; i < colPixels.length; i++) {
-                const colorIdx = colPixels[i];
-                if (colorIdx > 0 && colorIdx < activePalette.length) {
-                    const canvasX = offsetX + x;
-                    const canvasY = startY - i;
-
-                    if (canvasX >= 0 && canvasX < this.width && canvasY >= 0) {
-                        this.ctx.fillStyle = activePalette[colorIdx];
-                        this.ctx.fillRect(canvasX, canvasY, 1, 1);
-                        this.terrainMask[canvasY * this.width + canvasX] = 1;
+                for (const colorIdx of [hi, lo]) {
+                    if (colorIdx > 0 && colorIdx < paletteRgb.length) {
+                        const canvasY = this.height - 1 - row;
+                        if (canvasY >= 0) {
+                            const px = (canvasY * this.width + canvasX) * 4;
+                            const [r, g, b] = paletteRgb[colorIdx];
+                            buf[px]     = r;
+                            buf[px + 1] = g;
+                            buf[px + 2] = b;
+                            buf[px + 3] = 255;
+                            this.terrainMask[canvasY * this.width + canvasX] = 1;
+                        }
                     }
+                    row++;
                 }
             }
         }
+
+        this.ctx.putImageData(imageData, 0, 0);
 
         return true;
     }
@@ -684,6 +700,19 @@ export class TerrainSystem {
             img.onerror = () => resolve(false);
             img.src = dataUrl;
         });
+    }
+
+    /**
+     * Returns a copy of the terrain mask and height map for use in a Web Worker.
+     * The copies are safe to transfer/share without affecting live terrain.
+     */
+    public getSnapshot(): { terrainMask: Uint8Array; heightMap: Uint16Array; width: number; height: number } {
+        return {
+            terrainMask: this.terrainMask.slice(),
+            heightMap: this.heightMap.slice(),
+            width: this.width,
+            height: this.height,
+        };
     }
 
     /**

@@ -5,7 +5,7 @@ test('Game loads successfully', async ({ page }) => {
   await page.goto('http://localhost:5174/');
 
   // Check title
-  await expect(page).toHaveTitle(/Tanks-a-Lot TS/);
+  await expect(page).toHaveTitle(/Z-Tanks/);
 
   // Check if canvas exists
   const canvas = page.locator('#game-canvas');
