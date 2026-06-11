@@ -1,10 +1,10 @@
-# Tanks-a-Lot TS
+# Z-Tanks
 
-A TypeScript Progressive Web App (PWA) port of the classic artillery game.
+A TypeScript Progressive Web App (PWA) port of the classic artillery game Scorched Earth.
 
 ## Gameplay
 
-Tanks-a-Lot is a turn-based artillery game where players control tanks and try to destroy each other on a destructible 2D terrain.
+Z-Tanks is a turn-based artillery game where players control tanks and try to destroy each other on destructible 2D terrain.
 
 ### Core Mechanics
 - **Turn-Based Combat:** Players take turns moving their tanks, aiming, and firing a variety of weapons.
@@ -16,7 +16,7 @@ Tanks-a-Lot is a turn-based artillery game where players control tanks and try t
 ## Features
 - Destructible Terrain (Canvas-based) with settling/landslides
 - Physics (Gravity, Wind, Projectile Motion), both configurable at setup
-- Max firing power tied to tank strength (1000 at full health), as in the original
+- Max firing power tied to tank strength (10,000 at full health), scales with damage taken
 - Tank Movement and Aiming with fuel consumption
 - Hotseat Multiplayer & 8 AI personalities (Moron through Cyborg)
 - Full Scorched Earth arsenal: missiles, nukes, MIRV, Death's Head (9 warheads), rollers, diggers, sandhogs, riot weapons, dirt weapons, napalm, tracers, Funky Bomb, Leapfrog
@@ -44,7 +44,7 @@ On touch devices, use the on-screen D-pad (aim/power), the ⏪/⏩ buttons to mo
 
 ## Weapons & Items
 
-Tanks-a-Lot implements the original Scorched Earth arsenal (see `Requirements.md` for the full table). Highlights:
+Z-Tanks implements the original Scorched Earth arsenal (see `Requirements.md` for the full table). Highlights:
 
 ### Weapons
 - **Missile family:** Baby Missile (infinite) and Missile.
@@ -72,7 +72,7 @@ Tanks-a-Lot implements the original Scorched Earth arsenal (see `Requirements.md
 
 - Players start with configurable cash (default $10,000).
 - Earn credits for every point of damage dealt and a bounty for each kill; the round's last tank standing earns a win bonus.
-- Unspent credits collect 10% interest between rounds.
+- Unspent credits collect 10% interest between rounds (living tanks only).
 - Prices fluctuate with demand; unused gear can be sold back in the shop at a fraction of the current price.
 
 ## Development
@@ -121,7 +121,7 @@ This project is configured to automatically deploy to GitHub Pages on every merg
 2. Under "Build and deployment" → Source, select "GitHub Actions"
 3. The workflow will automatically deploy on the next push to `main`
 
-The site will be available at: `https://izep.github.io/tanks-ts/`
+The site will be available at: `https://izep.github.io/z-tanks/`
 
 ### Manual Deployment
 
