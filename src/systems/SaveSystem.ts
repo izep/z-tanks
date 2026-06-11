@@ -55,7 +55,10 @@ export class SaveSystem {
                     terrainDirty: false,
                     lastExplosionTime: 0,
                     borderMode: state.borderMode,
-                    windSetting: state.windSetting
+                    windSetting: state.windSetting,
+                    armsLevel: state.armsLevel,
+                    interestRate: state.interestRate,
+                    talkingTanks: state.talkingTanks
                 },
                 terrain: terrain.serialize(),
                 market: JSON.parse(JSON.stringify(economy.getMarketState()))
@@ -99,6 +102,9 @@ export class SaveSystem {
         state.lastExplosionTime = 0;
         state.borderMode = s.borderMode;
         state.windSetting = s.windSetting;
+        state.armsLevel = s.armsLevel;
+        state.interestRate = s.interestRate;
+        state.talkingTanks = s.talkingTanks;
 
         economy.restoreMarketState(saved.market);
         return true;

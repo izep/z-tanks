@@ -2,6 +2,7 @@ import { type GameState, GamePhase, type ProjectileState, type TankState, CONSTA
 import { TerrainSystem } from './TerrainSystem';
 import { WEAPONS } from '../core/WeaponData';
 import { SoundManager } from '../core/SoundManager';
+import { tankSay } from '../core/TankTalk';
 import {
     type BorderStrategy,
     DefaultBorderStrategy,
@@ -110,6 +111,11 @@ export class PhysicsSystem {
             // 2. Update (returns true if behavior requested removal)
             let shouldRemove = behavior.update(proj, state, dt, context);
 
+            // Mag Deflectors kick enemy projectiles away (one impulse each)
+            if (!shouldRemove && !proj.deflected) {
+                this.applyMagDeflection(state, proj);
+            }
+
             // 3. Border Check (if not already removed)
             if (!shouldRemove) {
                 const borderAction = this.borderStrategy.check(proj);
@@ -145,10 +151,12 @@ export class PhysicsSystem {
                 // Check Collision
                 if (this.checkCollision(state, proj)) {
                     // Special Handling for Rollers (Start Rolling)
-                    if (this.isRoller(proj.weaponType)) {
+                    // Contact triggers make rollers detonate on touch instead
+                    if (this.isRoller(proj.weaponType) && !proj.contactTrigger) {
                         this.startRolling(proj);
-                    } else if (WEAPONS[proj.weaponType]?.type === 'mirv' && !proj.splitDone) {
-                        // MIRV/Death's Head fizzle if they hit before reaching apogee
+                    } else if (WEAPONS[proj.weaponType]?.type === 'mirv' && !proj.splitDone && !proj.contactTrigger) {
+                        // MIRV/Death's Head fizzle if they hit before reaching
+                        // apogee — unless armed with a contact trigger
                         shouldRemove = true;
                     } else {
                         shouldRemove = true;
@@ -465,7 +473,9 @@ export class PhysicsSystem {
     public applyTankDamage(state: GameState, tank: TankState, damage: number, attackerId?: number): number {
         if (damage <= 0 || tank.health <= 0) return 0;
 
-        if (tank.activeShield && tank.shieldHealth && tank.shieldHealth > 0) {
+        // Mag Deflectors repel projectiles but do not absorb damage
+        const shieldAbsorbs = tank.activeShield !== 'mag_deflector';
+        if (shieldAbsorbs && tank.activeShield && tank.shieldHealth && tank.shieldHealth > 0) {
             const absorbed = Math.min(damage, tank.shieldHealth);
             tank.shieldHealth -= absorbed;
             damage -= absorbed;
@@ -479,8 +489,7 @@ export class PhysicsSystem {
         this.soundManager.playHit();
         if (tank.health <= 0) {
             tank.isDead = true;
-            tank.lastWords = ["Ouch!", "Nooo!", "Darn!", "Avenge me!"][Math.floor(Math.random() * 4)];
-            tank.sayTimer = 3;
+            tankSay(state, tank, 'death', 1, 3);
         }
 
         // Combat earnings (Requirements 1.1: money earned between rounds)
@@ -714,6 +723,16 @@ export class PhysicsSystem {
             }
         }
 
+        // Armed contact triggers are consumed one per shot
+        let contactTrigger: boolean | undefined;
+        if (tank.activeTrigger && (tank.accessories['contact_trigger'] || 0) > 0) {
+            contactTrigger = true;
+            tank.accessories['contact_trigger']--;
+            if (tank.accessories['contact_trigger'] <= 0) {
+                tank.activeTrigger = false; // Supply exhausted
+            }
+        }
+
         const projectile: ProjectileState = {
             id: generateId(),
             x: startX,
@@ -724,7 +743,8 @@ export class PhysicsSystem {
             ownerId: tank.id,
             elapsedTime: 0,
             trail: [],
-            guidance
+            guidance,
+            contactTrigger
         };
         state.projectiles.push(projectile);
 
@@ -751,6 +771,40 @@ export class PhysicsSystem {
         }
 
         state.phase = GamePhase.PROJECTILE_FLYING;
+    }
+
+    /**
+     * Mag Deflector (Requirements 2.2): kicks an enemy projectile away from
+     * the protected tank. One impulse per projectile; each deflection drains
+     * the deflector's charge until it breaks.
+     */
+    private applyMagDeflection(state: GameState, proj: ProjectileState) {
+        const DEFLECT_RADIUS = 60;
+        const DEFLECT_RADIUS_SQ = DEFLECT_RADIUS * DEFLECT_RADIUS;
+        const KICK = 350;
+        const CHARGE_PER_DEFLECT = 25;
+
+        for (const tank of state.tanks) {
+            if (tank.health <= 0 || tank.id === proj.ownerId) continue;
+            if (tank.activeShield !== 'mag_deflector' || !tank.shieldHealth || tank.shieldHealth <= 0) continue;
+
+            const dx = proj.x - tank.x;
+            const dy = proj.y - (tank.y - TANK_CENTER_Y_OFFSET);
+            const distSq = dx * dx + dy * dy;
+            if (distSq >= DEFLECT_RADIUS_SQ || distSq < 1) continue;
+
+            const dist = Math.sqrt(distSq);
+            proj.vx += (dx / dist) * KICK;
+            proj.vy += (dy / dist) * KICK;
+            proj.deflected = true;
+
+            tank.shieldHealth -= CHARGE_PER_DEFLECT;
+            if (tank.shieldHealth <= 0) {
+                tank.activeShield = undefined;
+            }
+            this.soundManager.playUI();
+            return;
+        }
     }
 
     /** Consumes up to MAX_ENERGY_BATTERIES batteries to power an energy weapon. */

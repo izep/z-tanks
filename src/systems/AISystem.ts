@@ -3,6 +3,7 @@ import { PhysicsSystem } from './PhysicsSystem';
 import { SoundManager } from '../core/SoundManager';
 import { TerrainSystem } from './TerrainSystem';
 import { activateShield, GUIDANCE_ORDER } from '../core/WeaponData';
+import { tankSay } from '../core/TankTalk';
 
 export class AISystem {
     private physicsSystem: PhysicsSystem;
@@ -58,11 +59,7 @@ export class AISystem {
             this.soundManager.playFire();
 
             // Talking Tanks (AI)
-            if (Math.random() < 0.5) {
-                const phrases = ['Calculating...', 'Target Acquired', 'Exterminate!', 'Logic demands death'];
-                tank.lastWords = phrases[Math.floor(Math.random() * phrases.length)];
-                tank.sayTimer = 2;
-            }
+            tankSay(state, tank, 'aiFire', 0.5);
 
             this.physicsSystem.fireProjectile(state, tank.power, tank.angle, tank.currentWeapon);
         }

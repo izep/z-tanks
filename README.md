@@ -22,9 +22,11 @@ Tanks-a-Lot is a turn-based artillery game where players control tanks and try t
 - Full Scorched Earth arsenal: missiles, nukes, MIRV, Death's Head (9 warheads), rollers, diggers, sandhogs, riot weapons, dirt weapons, napalm, tracers, Funky Bomb, Leapfrog
 - Energy weapons (Laser, Plasma Blast) powered by batteries
 - Guidance systems (Heat Guidance, Lazy Boy) that steer shots toward enemies
-- Economy: dynamic market pricing, interest on unspent credits, earnings for damage and kills, and sell-back of unused gear
+- Defensive accessories: Shields, Mag Deflector, Contact Triggers, Auto Defense, Parachutes
+- Economy: dynamic market pricing, configurable interest and market volatility, earnings for damage and kills, sell-back of unused gear, and arms-level shop restrictions
 - Save/Load: the game autosaves every turn; resume from the setup screen with "Continue Saved Game"
-- Unit Tests (Vitest) and browser end-to-end tests (Playwright)
+- Retro synthesized sound effects and a chiptune music loop, with volume/mute/music controls
+- Unit Tests (Vitest) and browser end-to-end tests (Playwright), both run in CI before every deploy
 
 ## Controls
 - **A / D**: Move Tank (consumes fuel)
@@ -34,8 +36,9 @@ Tanks-a-Lot is a turn-based artillery game where players control tanks and try t
 - **Tab**: Cycle to Next Weapon
 - **S**: Toggle Shield
 - **B**: Use Battery (restores health and max power)
+- **T**: Arm/disarm Contact Triggers
 
-On touch devices, use the on-screen D-pad and action buttons. Long-press the weapon or shield button to open a selector.
+On touch devices, use the on-screen D-pad (aim/power), the ⏪/⏩ buttons to move, the 🔋 button to use a battery, and the action buttons on the right. Long-press the weapon, shield, or guidance button to open a selector. The 🔊 button toggles sound.
 
 ## Weapons & Items
 
@@ -59,6 +62,9 @@ Tanks-a-Lot implements the original Scorched Earth arsenal (see `Requirements.md
 - **Battery:** Restores health, which also raises your max firing power, and powers energy weapons.
 - **Heat Guidance:** Steers your shot toward the nearest enemy as it descends. Consumed one per shot.
 - **Lazy Boy:** Full-flight homing guidance — fire and forget. Arm either via the crosshair button (click to toggle, long-press to choose).
+- **Mag Deflector:** Magnetic field that kicks incoming shots off course. It doesn't absorb damage, and each deflection drains its charge.
+- **Contact Triggers:** Your shots detonate on first contact — MIRVs explode even before apogee and rollers blow up on touch instead of rolling. Arm with **T**, one consumed per shot.
+- **Auto Defense:** Automatically raises your best shield at the start of every round. Buy once, works all game.
 
 ## Economy
 

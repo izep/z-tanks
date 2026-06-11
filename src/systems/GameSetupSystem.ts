@@ -1,8 +1,21 @@
 import { type GameState, GamePhase, CONSTANTS, ECONOMY, rollWind } from '../core/GameState';
 import { AIController, AIPersonality } from '../core/AIController';
+import { activateShield } from '../core/WeaponData';
 import { TerrainSystem } from './TerrainSystem';
 import { SoundManager } from '../core/SoundManager';
 import { WEAPONS, WEAPON_ORDER } from '../core/WeaponData';
+
+/**
+ * Auto Defense (Requirements 2.2): tanks that own one automatically raise
+ * their best shield at the start of every round. The unit is not consumed.
+ */
+export function applyAutoDefense(state: GameState): void {
+    state.tanks.forEach(tank => {
+        if (tank.health > 0 && (tank.accessories?.['auto_defense'] || 0) > 0 && !tank.activeShield) {
+            activateShield(tank);
+        }
+    });
+}
 
 export class GameSetupSystem {
     private terrainSystem: TerrainSystem;
@@ -61,6 +74,9 @@ export class GameSetupSystem {
         state.phase = GamePhase.AIMING;
         state.borderMode = config.borders || 'normal';
         state.windSetting = config.wind || 'normal';
+        state.armsLevel = config.armsLevel ?? 4;
+        state.interestRate = config.interestRate ?? ECONOMY.INTEREST_RATE;
+        state.talkingTanks = config.talkingTanks ?? true;
 
         // Gravity setting (Requirements 3.1)
         const gravityScale = config.gravity === 'low' ? 0.5 : (config.gravity === 'high' ? 1.5 : 1.0);
@@ -71,6 +87,7 @@ export class GameSetupSystem {
         console.log(`Initial Wind: ${state.wind.toFixed(1)}`);
 
         await this.terrainSystem.generate(state);
+        applyAutoDefense(state);
         this.soundManager.playUI(); // Will also resume AudioContext
     }
 

@@ -94,6 +94,12 @@ vi.mock('../src/core/SoundManager', () => {
             playImpact() {}
             playEngine() {}
             stopEngine() {}
+            getSettings() { return { volume: 0.6, muted: false, music: false }; }
+            setVolume() {}
+            setMuted() {}
+            setMusicEnabled() {}
+            startMusic() {}
+            stopMusic() {}
         }
     };
 });

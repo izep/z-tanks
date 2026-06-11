@@ -1,6 +1,6 @@
 import { type GameState, ECONOMY } from '../core/GameState';
 import { SoundManager } from '../core/SoundManager';
-import { WEAPONS, activateShield } from '../core/WeaponData';
+import { WEAPONS, activateShield, getArmsLevel } from '../core/WeaponData';
 import { EconomySystem } from './EconomySystem';
 
 export class ShopSystem {
@@ -40,6 +40,11 @@ export class ShopSystem {
         if (!tank) return;
 
         const weapon = WEAPONS[weaponId];
+        if (!weapon) return;
+
+        // Arms level restriction (Requirements 2.3) — applies to humans and AI
+        if (getArmsLevel(weaponId) > (state.armsLevel ?? 4)) return;
+
         const price = this.economySystem.getPrice(weaponId);
 
         if (tank.credits >= price) {

@@ -1,5 +1,5 @@
 import { GamePhase, type GameState } from '../core/GameState';
-import { WEAPON_ORDER, WEAPONS, GUIDANCE_ORDER } from '../core/WeaponData';
+import { WEAPON_ORDER, WEAPONS, GUIDANCE_ORDER, getArmsLevel } from '../core/WeaponData';
 
 export class UIManager {
     private container: HTMLElement;
@@ -62,11 +62,18 @@ export class UIManager {
             <span class="stat-label"><i class="fa-solid fa-crosshairs"></i> Guidance</span>
             <span class="stat-value" id="p-guidance">-</span>
         </div>
+        <div class="stat-row" id="row-trigger" style="display: none;">
+            <span class="stat-label"><i class="fa-solid fa-bolt"></i> Trigger</span>
+            <span class="stat-value" id="p-trigger">-</span>
+        </div>
       </div>
       
       <!-- ... Center Message ... -->
       <div id="turn-message" style="position: absolute; top: 30%; left: 50%; transform: translate(-50%, -50%); color: gold; display: none; pointer-events: none; text-align: center;">
       </div>
+
+      <!-- Mute toggle -->
+      <div id="btn-mute" title="Mute" style="position: absolute; top: 8px; right: 8px; font-size: 22px; cursor: pointer; background: rgba(0,0,0,0.4); border-radius: 6px; padding: 4px 8px; pointer-events: auto; z-index: 100; user-select: none;">🔊</div>
       
       <!-- ... D-Pad ... -->
       <div id="controls-left" class="control-cluster bottom-left">
@@ -74,14 +81,14 @@ export class UIManager {
             <div></div>
             <div class="d-pad-btn" id="btn-up"><span>▲</span></div>
             <div></div>
-            
+
             <div class="d-pad-btn" id="btn-left"><span>◀</span></div>
             <div class="d-pad-btn" id="btn-fire-small" style="font-size:12px;">🔥</div>
             <div class="d-pad-btn" id="btn-right"><span>▶</span></div>
-            
-            <div></div>
+
+            <div class="d-pad-btn" id="btn-move-left" title="Move Left (uses fuel)" style="font-size:14px;"><span>⏪</span></div>
             <div class="d-pad-btn" id="btn-down"><span>▼</span></div>
-            <div></div>
+            <div class="d-pad-btn" id="btn-move-right" title="Move Right (uses fuel)" style="font-size:14px;"><span>⏩</span></div>
         </div>
       </div>
 
@@ -96,6 +103,7 @@ export class UIManager {
         <div class="btn-circle btn-green" id="btn-guidance" title="Guidance">
             <i class="fa-solid fa-crosshairs" style="font-size:32px;"></i>
         </div>
+        <div class="btn-circle btn-yellow" id="btn-battery" title="Use Battery (restores health/power)" style="font-size:28px;">🔋</div>
       </div>
       
       <!-- Screens (Shop / Setup) -->
@@ -174,7 +182,36 @@ export class UIManager {
                  <br><br>
                  <label>Starting Cash: $<input type="number" id="setup-cash" value="10000" min="0" max="1000000" step="1000" style="padding: 5px; width: 90px; text-align: center;"></label>
                  <br><br>
-                 <label><input type="checkbox" id="setup-test-mode"> Test Mode (100 Weapons)</label>
+                 <label>Market Volatility:
+                    <select id="setup-volatility" style="padding: 5px;">
+                        <option value="none">None</option>
+                        <option value="low" selected>Low</option>
+                        <option value="medium">Medium</option>
+                        <option value="high">High</option>
+                    </select>
+                 </label>
+                 <label style="margin-left: 15px;">Interest:
+                    <select id="setup-interest" style="padding: 5px;">
+                        <option value="0">0%</option>
+                        <option value="0.05">5%</option>
+                        <option value="0.10" selected>10%</option>
+                        <option value="0.20">20%</option>
+                    </select>
+                 </label>
+                 <label style="margin-left: 15px;">Arms Level:
+                    <select id="setup-arms" style="padding: 5px;">
+                        <option value="1">1 - Basic</option>
+                        <option value="2">2 - Conventional</option>
+                        <option value="3">3 - Advanced</option>
+                        <option value="4" selected>4 - Unrestricted</option>
+                    </select>
+                 </label>
+                 <br><br>
+                 <label><input type="checkbox" id="setup-talking" checked> Talking Tanks</label>
+                 <label style="margin-left: 15px;"><input type="checkbox" id="setup-test-mode"> Test Mode (100 Weapons)</label>
+                 <br><br>
+                 <label>Volume: <input type="range" id="setup-volume" min="0" max="100" value="60" style="vertical-align: middle;"></label>
+                 <label style="margin-left: 15px;"><input type="checkbox" id="setup-music" checked> Music</label>
             </div>
 
             <button id="btn-start-game" style="padding: 10px 20px; font-size: 20px; cursor: pointer;">START GAME</button>
@@ -247,6 +284,20 @@ export class UIManager {
             this.onContinueGame();
         });
 
+        // Audio controls
+        const muteBtn = document.getElementById('btn-mute');
+        muteBtn?.addEventListener('click', () => {
+            const muted = !this.getAudioSettings().muted;
+            this.onAudioChange({ muted });
+            muteBtn.innerText = muted ? '🔇' : '🔊';
+        });
+        document.getElementById('setup-volume')?.addEventListener('input', (e) => {
+            this.onAudioChange({ volume: parseInt((e.target as HTMLInputElement).value) / 100 });
+        });
+        document.getElementById('setup-music')?.addEventListener('change', (e) => {
+            this.onAudioChange({ music: (e.target as HTMLInputElement).checked });
+        });
+
         document.getElementById('btn-start-game')?.addEventListener('click', () => {
             // Read config
             const count = parseInt((document.getElementById('setup-p-count') as HTMLInputElement).value);
@@ -273,6 +324,11 @@ export class UIManager {
             const gravity = (document.getElementById('setup-gravity') as HTMLSelectElement).value;
             const startingCash = parseInt((document.getElementById('setup-cash') as HTMLInputElement).value);
 
+            const volatility = (document.getElementById('setup-volatility') as HTMLSelectElement).value;
+            const interestRate = parseFloat((document.getElementById('setup-interest') as HTMLSelectElement).value);
+            const armsLevel = parseInt((document.getElementById('setup-arms') as HTMLSelectElement).value);
+            const talkingTanks = (document.getElementById('setup-talking') as HTMLInputElement).checked;
+
             const config = {
                 playerCount: count,
                 rounds,
@@ -281,6 +337,10 @@ export class UIManager {
                 borders,
                 wind,
                 gravity,
+                volatility,
+                interestRate,
+                armsLevel,
+                talkingTanks,
                 startingCash: Number.isFinite(startingCash) ? startingCash : undefined
             };
             this.onStartGame(config);
@@ -310,6 +370,15 @@ export class UIManager {
             if (continueBtn) {
                 continueBtn.style.display = this.hasSavedGame() ? 'inline-block' : 'none';
             }
+
+            // Reflect persisted audio settings
+            const audio = this.getAudioSettings();
+            const volumeSlider = document.getElementById('setup-volume') as HTMLInputElement | null;
+            if (volumeSlider) volumeSlider.value = String(Math.round(audio.volume * 100));
+            const musicCheck = document.getElementById('setup-music') as HTMLInputElement | null;
+            if (musicCheck) musicCheck.checked = audio.music;
+            const muteBtn = document.getElementById('btn-mute');
+            if (muteBtn) muteBtn.innerText = audio.muted ? '🔇' : '🔊';
         } else {
             this.shopContainer!.style.display = 'none';
             this.setupContainer!.style.display = 'none';
@@ -332,7 +401,12 @@ export class UIManager {
             'fuel_can': 'Items & Accessories'
         };
 
+        const armsLevel = this._lastState?.armsLevel ?? 4;
+
         WEAPON_ORDER.forEach(key => {
+            // Arms level restriction (Requirements 2.3)
+            if (getArmsLevel(key) > armsLevel) return;
+
             // Insert category header if this key marks the start of a new category
             if (categoryHeaders[key]) {
                 const header = document.createElement('h3');
@@ -516,8 +590,8 @@ export class UIManager {
         const tank = this.getTank();
         if (!tank) return;
 
-        // Show shields
-        const available = ['shield', 'heavy_shield'].filter(k => (tank.accessories[k] || 0) > 0);
+        // Show shields and the mag deflector
+        const available = ['shield', 'heavy_shield', 'mag_deflector'].filter(k => (tank.accessories[k] || 0) > 0);
 
         if (available.length === 0) {
             console.log("No shields available");
@@ -622,8 +696,31 @@ export class UIManager {
                 this._domCache['p-health'] = healthVal;
             }
 
+            // Contact trigger HUD row
+            const tCount = tank.accessories['contact_trigger'] || 0;
+            const triggerKey = `${tCount}-${tank.activeTrigger ? 'on' : 'off'}`;
+            if (this._domCache['trigger-key'] !== triggerKey) {
+                this._domCache['trigger-key'] = triggerKey;
+                const row = document.getElementById('row-trigger');
+                if (row) {
+                    if (tCount <= 0 && !tank.activeTrigger) {
+                        row.style.display = 'none';
+                    } else {
+                        row.style.display = 'flex';
+                        const valEl = document.getElementById('p-trigger')!;
+                        if (tank.activeTrigger) {
+                            valEl.innerText = `Armed (x${tCount})`;
+                            valEl.style.color = '#FFAA00';
+                        } else {
+                            valEl.innerText = `Off (x${tCount})`;
+                            valEl.style.color = 'white';
+                        }
+                    }
+                }
+            }
+
             // Shield
-            const sCount = (tank.accessories['shield'] || 0) + (tank.accessories['heavy_shield'] || 0);
+            const sCount = (tank.accessories['shield'] || 0) + (tank.accessories['heavy_shield'] || 0) + (tank.accessories['mag_deflector'] || 0);
             const sActive = tank.activeShield !== undefined;
             const shieldKey = `shield-${sCount}-${sActive}-${tank.shieldHealth ? Math.floor(tank.shieldHealth) : 0}`;
 
@@ -713,6 +810,19 @@ export class UIManager {
                 }
             }
 
+            // Battery Button State
+            const bCount = tank.accessories['battery'] || 0;
+            const btnBatteryKey = `btn-battery-${bCount > 0}`;
+            if (this._domCache['btn-battery'] !== btnBatteryKey) {
+                this._domCache['btn-battery'] = btnBatteryKey;
+                const btnBattery = document.getElementById('btn-battery');
+                if (btnBattery) {
+                    btnBattery.style.opacity = bCount > 0 ? '1' : '0.3';
+                    btnBattery.style.filter = bCount > 0 ? 'none' : 'grayscale(100%)';
+                    btnBattery.style.cursor = bCount > 0 ? 'pointer' : 'default';
+                }
+            }
+
             // Shield Button State
             const btnShieldKey = `btn-shield-${sCount > 0 || sActive}`;
             if (this._domCache['btn-shield'] !== btnShieldKey) {
@@ -774,6 +884,9 @@ export class UIManager {
         else if (id === 'heavy_shield') return new URL('../assets/misc/heavy_shield.svg', import.meta.url).href;
         else if (id === 'heat_guidance') return new URL('../assets/misc/heat_guidance.svg', import.meta.url).href;
         else if (id === 'lazy_boy') return new URL('../assets/misc/lazy_boy.svg', import.meta.url).href;
+        else if (id === 'mag_deflector') return new URL('../assets/misc/mag_deflector.svg', import.meta.url).href;
+        else if (id === 'contact_trigger') return new URL('../assets/misc/contact_trigger.svg', import.meta.url).href;
+        else if (id === 'auto_defense') return new URL('../assets/misc/auto_defense.svg', import.meta.url).href;
         else if (id === 'parachute') return new URL('../assets/misc/parachute.svg', import.meta.url).href;
         else if (id === 'fuel_can') return new URL('../assets/misc/fuel_tank.svg', import.meta.url).href;
         else if (id === 'battery') return new URL('../assets/misc/battery.svg', import.meta.url).href;
@@ -787,6 +900,9 @@ export class UIManager {
     public onSetWeapon: (id: string) => void = () => { };
     public onContinueGame: () => void = () => { };
     public hasSavedGame: () => boolean = () => false;
+    public onAudioChange: (s: { volume?: number; muted?: boolean; music?: boolean }) => void = () => { };
+    public getAudioSettings: () => { volume: number; muted: boolean; music: boolean } =
+        () => ({ volume: 0.6, muted: false, music: true });
 
     private triggerShieldSelect(id: string) {
         if (this.onSetShield) this.onSetShield(id);

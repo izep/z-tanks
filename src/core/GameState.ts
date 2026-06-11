@@ -39,6 +39,7 @@ export interface TankState {
   activeShield?: string;
   shieldHealth?: number;
   activeGuidance?: string; // Armed guidance accessory, consumed per shot
+  activeTrigger?: boolean; // Contact triggers armed (consumed per shot)
   aiController?: AIController;
   aiPersonality?: AIPersonality;
   hasLanded?: boolean;
@@ -66,6 +67,8 @@ export interface ProjectileState {
   leapfrogStage?: number; // 0, 1, 2 for sequential warhead tracking
   color?: string;
   guidance?: string; // Guidance system steering this projectile
+  contactTrigger?: boolean; // Detonate on first contact (no fizzle/roll)
+  deflected?: boolean; // Already kicked by a mag deflector
   // Sandhog warhead properties
   direction?: number; // 1 or -1 for horizontal direction
   tunnelLength?: number;
@@ -108,6 +111,9 @@ export interface GameState {
   lastExplosionTime: number;
   borderMode?: 'normal' | 'wrap' | 'bounce' | 'concrete';
   windSetting?: WindSetting; // How wind is rolled each round
+  armsLevel?: number; // Shop restriction tier 1-4 (Requirements 2.3)
+  interestRate?: number; // Interest on unspent credits between rounds
+  talkingTanks?: boolean; // Humorous tank comments (Requirements 3.4)
   marketState?: MarketState; // Economy system state
 }
 

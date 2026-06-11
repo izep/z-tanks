@@ -102,6 +102,14 @@ export class GameEngine {
         this.uiManager.onStartGame = async (config) => {
             await this.gameSetupSystem.handleStartGame(this.state, config);
             this.applyBorderMode(config.borders);
+            this.economySystem.setVolatility(config.volatility || 'low');
+            this.soundManager.startMusic();
+        };
+        this.uiManager.getAudioSettings = () => this.soundManager.getSettings();
+        this.uiManager.onAudioChange = (s) => {
+            if (s.volume !== undefined) this.soundManager.setVolume(s.volume);
+            if (s.muted !== undefined) this.soundManager.setMuted(s.muted);
+            if (s.music !== undefined) this.soundManager.setMusicEnabled(s.music);
         };
         this.uiManager.hasSavedGame = () => this.saveSystem.hasSave();
         this.uiManager.onContinueGame = async () => {
@@ -110,6 +118,7 @@ export class GameEngine {
                 this.applyBorderMode(this.state.borderMode || 'normal');
                 this.lastSavePhase = this.state.phase;
                 this.soundManager.playUI();
+                this.soundManager.startMusic();
             } else {
                 console.warn('Could not load saved game');
             }
@@ -217,8 +226,9 @@ export class GameEngine {
                         } else {
                             console.log("Round Over - Going to Shop");
                             // Unspent credits accrue interest between rounds (Requirements 3.2)
+                            const interestRate = this.state.interestRate ?? ECONOMY.INTEREST_RATE;
                             this.state.tanks.forEach(t => {
-                                t.credits = Math.floor(t.credits * (1 + ECONOMY.INTEREST_RATE));
+                                t.credits = Math.floor(t.credits * (1 + interestRate));
                             });
                             this.state.phase = GamePhase.SHOP;
                             this.shopSystem.applyMarketForces(); // Apply market drift

@@ -4,6 +4,7 @@ import { TerrainSystem } from './TerrainSystem';
 import { PhysicsSystem } from './PhysicsSystem';
 import { SoundManager } from '../core/SoundManager';
 import { WEAPONS, WEAPON_ORDER, activateShield } from '../core/WeaponData';
+import { tankSay } from '../core/TankTalk';
 
 /**
  * Handles input for the current player during their turn.
@@ -85,6 +86,16 @@ export class PlayerInputSystem {
             }
         }
 
+        // Contact trigger arming (consumed per shot while armed)
+        if (this.inputManager.isActionTriggered(GameAction.TOGGLE_TRIGGER)) {
+            if (tank.activeTrigger) {
+                tank.activeTrigger = false;
+            } else if ((tank.accessories['contact_trigger'] || 0) > 0) {
+                tank.activeTrigger = true;
+                this.soundManager.playUI();
+            }
+        }
+
         // Battery usage to restore health
         if (this.inputManager.isActionTriggered(GameAction.USE_BATTERY)) {
             if ((tank.accessories['battery'] || 0) > 0 && tank.health < 100) {
@@ -155,11 +166,7 @@ export class PlayerInputSystem {
                 this.soundManager.playFire();
 
                 // Talking Tanks
-                if (Math.random() < 0.3) {
-                    const phrases = ['Eat this!', 'Take cover!', 'Incoming!', 'Bye bye!'];
-                    tank.lastWords = phrases[Math.floor(Math.random() * phrases.length)];
-                    tank.sayTimer = 2;
-                }
+                tankSay(state, tank, 'fire', 0.3);
 
                 this.physicsSystem.fireProjectile(state, tank.power, tank.angle, tank.currentWeapon);
             }

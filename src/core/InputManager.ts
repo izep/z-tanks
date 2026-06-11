@@ -10,6 +10,7 @@ export const GameAction = {
     MOVE_RIGHT: 'MOVE_RIGHT',
     TOGGLE_SHIELD: 'TOGGLE_SHIELD',
     USE_BATTERY: 'USE_BATTERY',
+    TOGGLE_TRIGGER: 'TOGGLE_TRIGGER',
 } as const;
 
 export type GameAction = typeof GameAction[keyof typeof GameAction];
@@ -42,6 +43,9 @@ export class InputManager {
 
         // Battery key
         this.keyBindings.set('b', GameAction.USE_BATTERY);
+
+        // Contact trigger key
+        this.keyBindings.set('t', GameAction.TOGGLE_TRIGGER);
     }
 
     private attachListeners() {

@@ -1,4 +1,5 @@
 import { type GameState, GamePhase, CONSTANTS, rollWind } from '../core/GameState';
+import { applyAutoDefense } from './GameSetupSystem';
 import { TerrainSystem } from './TerrainSystem';
 import { PhysicsSystem } from './PhysicsSystem';
 import { SoundManager } from '../core/SoundManager';
@@ -51,6 +52,7 @@ export class GameFlowSystem {
         });
 
         state.currentPlayerIndex = 0;
+        applyAutoDefense(state);
         this.soundManager.playUI();
     }
 }

@@ -53,7 +53,8 @@ export default defineConfig({
         })
     ],
     test: {
-        exclude: ['**/node_modules/**', '**/dist/**', 'tests/app.spec.ts'],
+        // *.spec.ts files are Playwright e2e tests; vitest runs *.test.ts only
+        exclude: ['**/node_modules/**', '**/dist/**', 'tests/**/*.spec.ts'],
         setupFiles: ['./tests/setup.ts']
     }
 });

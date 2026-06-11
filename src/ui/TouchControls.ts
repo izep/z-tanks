@@ -21,6 +21,9 @@ export class TouchControls {
         this.bindButton('btn-right', GameAction.AIM_DOWN); // ArrowRight maps to AIM_DOWN
         this.bindButton('btn-fire', GameAction.FIRE);
         this.bindButton('btn-fire-small', GameAction.FIRE);
+        this.bindButton('btn-move-left', GameAction.MOVE_LEFT);
+        this.bindButton('btn-move-right', GameAction.MOVE_RIGHT);
+        this.bindButton('btn-battery', GameAction.USE_BATTERY);
     }
 
     private bindButton(id: string, action: GameAction) {

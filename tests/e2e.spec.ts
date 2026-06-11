@@ -54,6 +54,33 @@ test.describe('App shell', () => {
         // Wind and gravity offer the documented choices (Requirements 3.1)
         await expect(page.locator('#setup-wind option')).toHaveCount(3);
         await expect(page.locator('#setup-gravity option')).toHaveCount(3);
+
+        // Economy, arms level, talking tanks, and audio options
+        await expect(page.locator('#setup-volatility')).toBeVisible();
+        await expect(page.locator('#setup-interest')).toBeVisible();
+        await expect(page.locator('#setup-arms')).toBeVisible();
+        await expect(page.locator('#setup-talking')).toBeVisible();
+        await expect(page.locator('#setup-volume')).toBeVisible();
+        await expect(page.locator('#setup-music')).toBeVisible();
+    });
+
+    test('arms level and economy options apply to game state', async ({ page }) => {
+        await page.goto('/');
+        await page.locator('#p-type-1').selectOption('human');
+        await page.locator('#setup-arms').selectOption('1');
+        await page.locator('#setup-interest').selectOption('0.20');
+        await page.locator('#setup-talking').uncheck();
+        await page.locator('#btn-start-game').click();
+
+        await expect.poll(() => getPhase(page)).toBe('AIMING');
+
+        const snapshot = await page.evaluate(() => {
+            const s = (window as any).game.state;
+            return { armsLevel: s.armsLevel, interestRate: s.interestRate, talkingTanks: s.talkingTanks };
+        });
+        expect(snapshot.armsLevel).toBe(1);
+        expect(snapshot.interestRate).toBeCloseTo(0.20, 5);
+        expect(snapshot.talkingTanks).toBe(false);
     });
 });
 
@@ -64,6 +91,12 @@ test.describe('Game start', () => {
         await expect(page.locator('#setup-layer')).toBeHidden();
         await expect(page.locator('#hud')).toBeVisible();
         await expect(page.locator('#p-name')).toHaveText('Player 1');
+
+        // Touch controls present: d-pad, movement, fire, battery, mute
+        await expect(page.locator('#btn-move-left')).toBeVisible();
+        await expect(page.locator('#btn-move-right')).toBeVisible();
+        await expect(page.locator('#btn-battery')).toBeVisible();
+        await expect(page.locator('#btn-mute')).toBeVisible();
 
         const tankCount = await page.evaluate(() => (window as any).game.state.tanks.length);
         expect(tankCount).toBe(2);

@@ -78,10 +78,36 @@ export const WEAPON_ORDER = [
     'battery',
     'heat_guidance',
     'lazy_boy',
+    'mag_deflector',
+    'contact_trigger',
+    'auto_defense',
 ];
 
 /** Guidance accessories, strongest first (Requirements 2.2). */
 export const GUIDANCE_ORDER = ['lazy_boy', 'heat_guidance'];
+
+/**
+ * Arms level restrictions (Requirements 2.3): hosts can limit the shop to a
+ * weapons tier. Unlisted items are level 1 (always available).
+ */
+const ARMS_LEVELS: Record<string, number> = {
+    // Level 2: stronger conventional and terrain weapons
+    'baby_nuke': 2, 'leapfrog': 2, 'baby_roller': 2, 'roller': 2,
+    'riot_blast': 2, 'heavy_riot_bomb': 2, 'heavy_digger': 2,
+    'ton_of_dirt': 2, 'liquid_dirt': 2, 'dirt_charge': 2,
+    'earth_disrupter': 2, 'napalm': 2, 'heavy_shield': 2, 'heat_guidance': 2,
+    'mag_deflector': 2, 'auto_defense': 2,
+    // Level 3: heavy ordnance and energy weapons
+    'nuke': 3, 'mirv': 3, 'funky_bomb': 3, 'heavy_roller': 3,
+    'baby_sandhog': 3, 'sandhog': 3, 'plasma_blast': 3, 'laser': 3,
+    'hot_napalm': 3, 'lazy_boy': 3,
+    // Level 4: the world-enders
+    'death_head': 4, 'heavy_sandhog': 4
+};
+
+export function getArmsLevel(weaponId: string): number {
+    return ARMS_LEVELS[weaponId] ?? 1;
+}
 
 export const WEAPONS: Record<string, WeaponStats> = {
     'baby_missile': {
@@ -444,6 +470,40 @@ export const WEAPONS: Record<string, WeaponStats> = {
         description: 'Restores 10 health, raising max firing power. Boosts energy weapons.',
         type: 'item',
         effectValue: 10,
+        bundleSize: 1
+    },
+    'mag_deflector': {
+        name: 'Mag Deflector',
+        cost: 10000,
+        radius: 0,
+        damage: 0,
+        color: '#88AAFF',
+        description: 'Magnetic field that kicks incoming shots away. Does not absorb hits.',
+        type: 'item',
+        effectValue: 1,
+        shieldStrength: 100,
+        bundleSize: 1
+    },
+    'contact_trigger': {
+        name: 'Contact Triggers',
+        cost: 1000,
+        radius: 0,
+        damage: 0,
+        color: '#FFAA00',
+        description: 'Shots detonate on first contact: MIRVs explode pre-apogee, rollers blow on touch. Toggle with T.',
+        type: 'item',
+        effectValue: 5,
+        bundleSize: 5
+    },
+    'auto_defense': {
+        name: 'Auto Defense',
+        cost: 15000,
+        radius: 0,
+        damage: 0,
+        color: '#AAFFAA',
+        description: 'Automatically raises your best shield at the start of every round.',
+        type: 'item',
+        effectValue: 1,
         bundleSize: 1
     },
     'heat_guidance': {
