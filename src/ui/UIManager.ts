@@ -74,6 +74,9 @@ export class UIManager {
 
       <!-- Mute toggle -->
       <div id="btn-mute" title="Mute" style="position: absolute; top: 8px; right: 8px; font-size: 22px; cursor: pointer; background: rgba(0,0,0,0.4); border-radius: 6px; padding: 4px 8px; pointer-events: auto; z-index: 100; user-select: none;">🔊</div>
+
+      <!-- Pause button (play phases only) -->
+      <div id="btn-pause" title="Pause (Esc)" style="display: none; position: absolute; top: 8px; right: 56px; font-size: 22px; cursor: pointer; background: rgba(0,0,0,0.4); border-radius: 6px; padding: 4px 8px; pointer-events: auto; z-index: 100; user-select: none;">⏸</div>
       
       <!-- ... D-Pad ... -->
       <div id="controls-left" class="control-cluster bottom-left">
@@ -131,14 +134,11 @@ export class UIManager {
 
         // Add Enter Key Listener for Shop and Game Over
         window.addEventListener('keydown', (e) => {
-            if (this.shopContainer && this.shopContainer.style.display === 'block') {
-                if (e.key === 'Enter') {
-                    this.onNextRound();
-                }
-            } else if (document.getElementById('turn-message')?.style.display === 'block' && document.getElementById('turn-message')?.innerText.includes('GAME OVER')) {
-                if (e.key === 'Enter') {
-                    this.onRestartGame();
-                }
+            if (e.key !== 'Enter') return;
+            if (this.shopContainer && this.shopContainer.style.display === 'flex') {
+                this.onNextRound();
+            } else if (this._lastState?.phase === 'GAME_OVER') {
+                this.onRestartGame();
             }
         });
 
@@ -219,6 +219,97 @@ export class UIManager {
         `;
         this.container.appendChild(setupDiv);
         this.setupContainer = setupDiv;
+
+        // Main Menu
+        const menuDiv = document.createElement('div');
+        menuDiv.id = 'menu-layer';
+        menuDiv.style.cssText = 'display: none; position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: linear-gradient(to bottom, #0a0a1a 0%, #1a1a2e 60%, #3d2b1f 100%); color: white; text-align: center; pointer-events: auto; z-index: 2500; flex-direction: column; align-items: center; justify-content: center;';
+        menuDiv.innerHTML = `
+            <h1 style="font-size: 56px; color: gold; margin-bottom: 4px; text-shadow: 3px 3px 0 #5c3a00, 6px 6px 12px rgba(0,0,0,0.8);">TANKS-A-LOT</h1>
+            <div style="color: #aaa; margin-bottom: 40px; letter-spacing: 3px;">A SCORCHED EARTH TRIBUTE</div>
+            <button id="btn-menu-new" class="menu-btn" style="display: block; width: 280px; margin: 8px auto; padding: 14px; font-size: 20px; cursor: pointer; background: gold; color: black; border: none; border-radius: 6px; font-weight: bold;">NEW GAME</button>
+            <button id="btn-menu-continue" class="menu-btn" style="display: none; width: 280px; margin: 8px auto; padding: 14px; font-size: 20px; cursor: pointer; background: #2a6; color: white; border: 1px solid #4c8; border-radius: 6px; font-weight: bold;">CONTINUE SAVED GAME</button>
+            <button id="btn-menu-help" class="menu-btn" style="display: block; width: 280px; margin: 8px auto; padding: 14px; font-size: 20px; cursor: pointer; background: #333; color: white; border: 1px solid #555; border-radius: 6px;">HOW TO PLAY</button>
+        `;
+        this.container.appendChild(menuDiv);
+
+        // Pause Overlay
+        const pauseDiv = document.createElement('div');
+        pauseDiv.id = 'pause-layer';
+        pauseDiv.style.cssText = 'display: none; position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.75); color: white; text-align: center; pointer-events: auto; z-index: 2400; flex-direction: column; align-items: center; justify-content: center; backdrop-filter: blur(3px);';
+        pauseDiv.innerHTML = `
+            <h1 style="color: gold; margin-bottom: 30px;">PAUSED</h1>
+            <button id="btn-pause-resume" style="display: block; width: 240px; margin: 6px auto; padding: 12px; font-size: 18px; cursor: pointer; background: gold; color: black; border: none; border-radius: 6px; font-weight: bold;">RESUME</button>
+            <button id="btn-pause-help" style="display: block; width: 240px; margin: 6px auto; padding: 12px; font-size: 18px; cursor: pointer; background: #333; color: white; border: 1px solid #555; border-radius: 6px;">HOW TO PLAY</button>
+            <button id="btn-pause-quit" style="display: block; width: 240px; margin: 6px auto; padding: 12px; font-size: 18px; cursor: pointer; background: #633; color: white; border: 1px solid #855; border-radius: 6px;">SAVE & QUIT TO MENU</button>
+            <div style="margin-top: 25px;">
+                <label>Volume: <input type="range" id="pause-volume" min="0" max="100" value="60" style="vertical-align: middle;"></label>
+                <label style="margin-left: 15px;"><input type="checkbox" id="pause-music" checked> Music</label>
+            </div>
+        `;
+        this.container.appendChild(pauseDiv);
+
+        // Help Overlay
+        const helpDiv = document.createElement('div');
+        helpDiv.id = 'help-layer';
+        helpDiv.style.cssText = 'display: none; position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.92); color: white; pointer-events: auto; z-index: 3000; overflow-y: auto;';
+        helpDiv.innerHTML = `
+            <div style="max-width: 640px; margin: 30px auto; padding: 0 20px; text-align: left;">
+                <h2 style="color: gold; text-align: center;">HOW TO PLAY</h2>
+                <p>Take turns aiming and firing at enemy tanks on destructible terrain. Last tank standing wins the round. Earn cash for damage and kills, then buy bigger weapons in the shop between rounds.</p>
+                <h3 style="color: gold;">Controls</h3>
+                <table style="width: 100%; border-collapse: collapse; font-size: 14px;">
+                    <tr><td style="padding: 3px; color: #4db8ff;">← / →</td><td>Adjust angle</td></tr>
+                    <tr><td style="padding: 3px; color: #4db8ff;">↑ / ↓</td><td>Adjust power (capped by tank health)</td></tr>
+                    <tr><td style="padding: 3px; color: #4db8ff;">Space</td><td>Fire</td></tr>
+                    <tr><td style="padding: 3px; color: #4db8ff;">Tab</td><td>Next weapon</td></tr>
+                    <tr><td style="padding: 3px; color: #4db8ff;">A / D</td><td>Move tank (uses fuel)</td></tr>
+                    <tr><td style="padding: 3px; color: #4db8ff;">S</td><td>Toggle shield</td></tr>
+                    <tr><td style="padding: 3px; color: #4db8ff;">B</td><td>Use battery (restores health &amp; max power)</td></tr>
+                    <tr><td style="padding: 3px; color: #4db8ff;">T</td><td>Arm contact triggers</td></tr>
+                    <tr><td style="padding: 3px; color: #4db8ff;">Esc</td><td>Pause</td></tr>
+                </table>
+                <p style="color: #aaa; font-size: 13px;">On touch: D-pad aims, ⏪/⏩ move, 🔥 fires. Long-press the weapon, shield, or guidance buttons for a full selector.</p>
+                <h3 style="color: gold;">Tips</h3>
+                <ul style="font-size: 14px; line-height: 1.7;">
+                    <li>Wind pushes shots sideways — watch the HUD arrow.</li>
+                    <li>MIRVs split at the top of their arc; they fizzle if they hit on the way up.</li>
+                    <li>Rollers tumble downhill — and bounce off shields.</li>
+                    <li>Energy weapons are weak without batteries on board.</li>
+                    <li>Unspent cash earns interest between rounds.</li>
+                </ul>
+                <div style="text-align: center; margin: 25px 0;">
+                    <button id="btn-help-close" style="padding: 12px 50px; font-size: 18px; cursor: pointer; background: gold; color: black; border: none; border-radius: 6px; font-weight: bold;">CLOSE</button>
+                </div>
+            </div>
+        `;
+        this.container.appendChild(helpDiv);
+
+        // Menu / pause / help bindings
+        document.getElementById('btn-menu-new')?.addEventListener('click', () => this.onNewGame());
+        document.getElementById('btn-menu-continue')?.addEventListener('click', () => this.onContinueGame());
+        document.getElementById('btn-menu-help')?.addEventListener('click', () => this.showHelp(true));
+        document.getElementById('btn-help-close')?.addEventListener('click', () => this.showHelp(false));
+        document.getElementById('btn-pause-resume')?.addEventListener('click', () => this.onTogglePause());
+        document.getElementById('btn-pause-help')?.addEventListener('click', () => this.showHelp(true));
+        document.getElementById('btn-pause-quit')?.addEventListener('click', () => this.onQuitToMenu());
+        document.getElementById('btn-pause')?.addEventListener('click', () => this.onTogglePause());
+        document.getElementById('pause-volume')?.addEventListener('input', (e) => {
+            this.onAudioChange({ volume: parseInt((e.target as HTMLInputElement).value) / 100 });
+        });
+        document.getElementById('pause-music')?.addEventListener('change', (e) => {
+            this.onAudioChange({ music: (e.target as HTMLInputElement).checked });
+        });
+        window.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                const help = document.getElementById('help-layer');
+                if (help && help.style.display !== 'none') {
+                    this.showHelp(false);
+                } else {
+                    this.onTogglePause();
+                }
+            }
+        });
 
         // Dynamic Player List
         const countInput = document.getElementById('setup-p-count') as HTMLInputElement;
@@ -347,10 +438,38 @@ export class UIManager {
         });
     }
 
+    private showHelp(visible: boolean) {
+        const help = document.getElementById('help-layer');
+        if (help) help.style.display = visible ? 'block' : 'none';
+    }
+
     private handlePhaseChange(state: GameState) {
         const hud = document.getElementById('hud');
         const controlsLeft = document.getElementById('controls-left');
         const controlsRight = document.getElementById('controls-right');
+        const menuLayer = document.getElementById('menu-layer');
+        const pauseBtn = document.getElementById('btn-pause');
+
+        if (menuLayer) menuLayer.style.display = state.phase === 'MENU' ? 'flex' : 'none';
+        if (pauseBtn) {
+            const isPlay = !['MENU', 'SETUP', 'SHOP', 'GAME_OVER'].includes(state.phase);
+            pauseBtn.style.display = isPlay ? 'block' : 'none';
+        }
+
+        if (state.phase === 'MENU') {
+            this.shopContainer!.style.display = 'none';
+            this.setupContainer!.style.display = 'none';
+            if (hud) hud.style.display = 'none';
+            if (controlsLeft) controlsLeft.style.display = 'none';
+            if (controlsRight) controlsRight.style.display = 'none';
+
+            // Offer to resume a saved game (Requirements 8.4)
+            const continueBtn = document.getElementById('btn-menu-continue');
+            if (continueBtn) {
+                continueBtn.style.display = this.hasSavedGame() ? 'block' : 'none';
+            }
+            return;
+        }
 
         if (state.phase === 'SHOP') {
             this.shopContainer!.style.display = 'flex';
@@ -670,6 +789,24 @@ export class UIManager {
             this._domCache = {};
         }
 
+        // Pause overlay
+        const pausedKey = state.isPaused ? 'on' : 'off';
+        if (this._domCache['paused'] !== pausedKey) {
+            this._domCache['paused'] = pausedKey;
+            const pauseLayer = document.getElementById('pause-layer');
+            if (pauseLayer) {
+                pauseLayer.style.display = state.isPaused ? 'flex' : 'none';
+                if (state.isPaused) {
+                    // Reflect current audio settings in the pause controls
+                    const audio = this.getAudioSettings();
+                    const vol = document.getElementById('pause-volume') as HTMLInputElement | null;
+                    if (vol) vol.value = String(Math.round(audio.volume * 100));
+                    const music = document.getElementById('pause-music') as HTMLInputElement | null;
+                    if (music) music.checked = audio.music;
+                }
+            }
+        }
+
         const tank = state.tanks[state.currentPlayerIndex];
         if (tank) {
             if (this._domCache['p-name'] !== tank.name) {
@@ -856,7 +993,7 @@ export class UIManager {
                 winnerText = "DRAW!";
             }
 
-            msgEl.innerHTML = `${winnerText}<br><br><span style="font-size:16px; color: white;">Press ENTER to Restart</span>`;
+            msgEl.innerHTML = `${winnerText}<br><br><span style="font-size:16px; color: white;">Press ENTER for Main Menu</span>`;
             msgEl.style.display = 'block';
         } else {
             msgEl.style.display = 'none';
@@ -903,6 +1040,9 @@ export class UIManager {
     public onAudioChange: (s: { volume?: number; muted?: boolean; music?: boolean }) => void = () => { };
     public getAudioSettings: () => { volume: number; muted: boolean; music: boolean } =
         () => ({ volume: 0.6, muted: false, music: true });
+    public onNewGame: () => void = () => { };
+    public onTogglePause: () => void = () => { };
+    public onQuitToMenu: () => void = () => { };
 
     private triggerShieldSelect(id: string) {
         if (this.onSetShield) this.onSetShield(id);

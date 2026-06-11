@@ -2,6 +2,7 @@ import type { AIController, AIPersonality } from './AIController';
 import type { MarketState } from '../systems/EconomySystem';
 
 export const GamePhase = {
+  MENU: 'MENU',
   SETUP: 'SETUP',
   AIMING: 'AIMING',
   FIRING: 'FIRING',
@@ -96,8 +97,19 @@ export interface SmokeTrailState {
   duration: number; // ms
 }
 
+// Phases where the simulation is running and pausing makes sense
+export const PLAY_PHASES: GamePhase[] = [
+  GamePhase.AIMING,
+  GamePhase.FIRING,
+  GamePhase.PROJECTILE_FLYING,
+  GamePhase.EXPLOSION,
+  GamePhase.TERRAIN_SETTLING,
+  GamePhase.DEATH_SEQUENCE
+];
+
 export interface GameState {
   phase: GamePhase;
+  isPaused?: boolean; // Pause freezes the simulation; never persisted
   tanks: TankState[];
   projectiles: ProjectileState[];
   explosions: ExplosionState[];

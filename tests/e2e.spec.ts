@@ -8,10 +8,17 @@ import { test, expect, type Page } from '@playwright/test';
 const getPhase = (page: Page) =>
     page.evaluate(() => (window as any).game.state.phase as string);
 
+/** Navigates from the main menu to the setup screen. */
+async function openSetup(page: Page) {
+    await page.goto('/');
+    await expect(page.locator('#btn-menu-new')).toBeVisible();
+    await page.locator('#btn-menu-new').click();
+    await expect(page.locator('#btn-start-game')).toBeVisible();
+}
+
 /** Starts a 2-player game. Both players human so turns stay deterministic. */
 async function startTwoHumanGame(page: Page) {
-    await page.goto('/');
-    await expect(page.locator('#btn-start-game')).toBeVisible();
+    await openSetup(page);
 
     // Make Player 2 human (defaults to AI)
     await page.locator('#p-type-1').selectOption('human');
@@ -26,7 +33,7 @@ async function startTwoHumanGame(page: Page) {
 }
 
 test.describe('App shell', () => {
-    test('loads with canvas, UI layer, and setup screen', async ({ page }) => {
+    test('loads to the main menu', async ({ page }) => {
         const errors: string[] = [];
         page.on('pageerror', err => errors.push(err.message));
 
@@ -35,14 +42,28 @@ test.describe('App shell', () => {
         await expect(page).toHaveTitle(/Tanks-a-Lot TS/);
         await expect(page.locator('#game-canvas')).toBeVisible();
         await expect(page.locator('#ui-layer')).toBeVisible();
-        await expect(page.locator('#setup-layer')).toBeVisible();
-        await expect(page.locator('#btn-start-game')).toBeVisible();
+        await expect(page.locator('#menu-layer')).toBeVisible();
+        await expect(page.locator('#btn-menu-new')).toBeVisible();
+        await expect(page.locator('#btn-menu-help')).toBeVisible();
 
         expect(errors).toEqual([]);
     });
 
-    test('setup screen exposes game options', async ({ page }) => {
+    test('menu opens the help overlay and the setup screen', async ({ page }) => {
         await page.goto('/');
+
+        await page.locator('#btn-menu-help').click();
+        await expect(page.locator('#help-layer')).toBeVisible();
+        await page.locator('#btn-help-close').click();
+        await expect(page.locator('#help-layer')).toBeHidden();
+
+        await page.locator('#btn-menu-new').click();
+        await expect(page.locator('#setup-layer')).toBeVisible();
+        await expect(page.locator('#menu-layer')).toBeHidden();
+    });
+
+    test('setup screen exposes game options', async ({ page }) => {
+        await openSetup(page);
 
         await expect(page.locator('#setup-p-count')).toBeVisible();
         await expect(page.locator('#setup-rounds')).toBeVisible();
@@ -65,7 +86,7 @@ test.describe('App shell', () => {
     });
 
     test('arms level and economy options apply to game state', async ({ page }) => {
-        await page.goto('/');
+        await openSetup(page);
         await page.locator('#p-type-1').selectOption('human');
         await page.locator('#setup-arms').selectOption('1');
         await page.locator('#setup-interest').selectOption('0.20');
@@ -103,7 +124,7 @@ test.describe('Game start', () => {
     });
 
     test('applies setup options to game state', async ({ page }) => {
-        await page.goto('/');
+        await openSetup(page);
         await page.locator('#p-type-1').selectOption('human');
         await page.locator('#setup-wind').selectOption('none');
         await page.locator('#setup-gravity').selectOption('high');
@@ -254,10 +275,10 @@ test.describe('Save / Load', () => {
             game.saveSystem.save(game.state, game.terrainSystem, game.economySystem);
         });
 
-        // Fresh page load: the setup screen offers to continue
+        // Fresh page load: the main menu offers to continue
         await page.reload();
-        await expect(page.locator('#btn-continue-game')).toBeVisible();
-        await page.locator('#btn-continue-game').click();
+        await expect(page.locator('#btn-menu-continue')).toBeVisible();
+        await page.locator('#btn-menu-continue').click();
 
         await expect.poll(() => getPhase(page)).toBe('AIMING');
         const snapshot = await page.evaluate(() => {
@@ -270,6 +291,45 @@ test.describe('Save / Load', () => {
 
         // HUD reflects the restored game
         await expect(page.locator('#p-credits')).toHaveText('77777');
+    });
+});
+
+test.describe('Pause', () => {
+    test('Esc pauses (freezing the game) and the pause menu resumes or quits', async ({ page }) => {
+        await startTwoHumanGame(page);
+
+        await page.keyboard.press('Escape');
+        await expect(page.locator('#pause-layer')).toBeVisible();
+        expect(await page.evaluate(() => (window as any).game.state.isPaused)).toBe(true);
+
+        // Simulation is frozen: aiming input has no effect while paused
+        const angleBefore = await page.evaluate(() => (window as any).game.state.tanks[0].angle);
+        await page.keyboard.down('ArrowLeft');
+        await page.waitForTimeout(300);
+        await page.keyboard.up('ArrowLeft');
+        const angleAfter = await page.evaluate(() => (window as any).game.state.tanks[0].angle);
+        expect(angleAfter).toBe(angleBefore);
+
+        // Resume via the pause menu
+        await page.locator('#btn-pause-resume').click();
+        await expect(page.locator('#pause-layer')).toBeHidden();
+        expect(await page.evaluate(() => (window as any).game.state.isPaused)).toBe(false);
+
+        // Pause via the on-screen button, then quit to the main menu
+        await page.locator('#btn-pause').click();
+        await expect(page.locator('#pause-layer')).toBeVisible();
+        await page.locator('#btn-pause-quit').click();
+        await expect(page.locator('#menu-layer')).toBeVisible();
+
+        // The game was saved on the way out, so Continue is offered
+        await expect(page.locator('#btn-menu-continue')).toBeVisible();
+    });
+
+    test('Esc does nothing on the main menu', async ({ page }) => {
+        await page.goto('/');
+        await page.keyboard.press('Escape');
+        await expect(page.locator('#pause-layer')).toBeHidden();
+        await expect(page.locator('#menu-layer')).toBeVisible();
     });
 });
 

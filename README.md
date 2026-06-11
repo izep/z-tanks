@@ -24,7 +24,8 @@ Tanks-a-Lot is a turn-based artillery game where players control tanks and try t
 - Guidance systems (Heat Guidance, Lazy Boy) that steer shots toward enemies
 - Defensive accessories: Shields, Mag Deflector, Contact Triggers, Auto Defense, Parachutes
 - Economy: dynamic market pricing, configurable interest and market volatility, earnings for damage and kills, sell-back of unused gear, and arms-level shop restrictions
-- Save/Load: the game autosaves every turn; resume from the setup screen with "Continue Saved Game"
+- Main menu with How-to-Play guide, and a pause menu (Esc or ⏸) with audio controls and Save & Quit
+- Save/Load: the game autosaves every turn; resume from the main menu with "Continue Saved Game"
 - Retro synthesized sound effects and a chiptune music loop, with volume/mute/music controls
 - Unit Tests (Vitest) and browser end-to-end tests (Playwright), both run in CI before every deploy
 
@@ -37,6 +38,7 @@ Tanks-a-Lot is a turn-based artillery game where players control tanks and try t
 - **S**: Toggle Shield
 - **B**: Use Battery (restores health and max power)
 - **T**: Arm/disarm Contact Triggers
+- **Esc**: Pause / resume
 
 On touch devices, use the on-screen D-pad (aim/power), the ⏪/⏩ buttons to move, the 🔋 button to use a battery, and the action buttons on the right. Long-press the weapon, shield, or guidance button to open a selector. The 🔊 button toggles sound.
 

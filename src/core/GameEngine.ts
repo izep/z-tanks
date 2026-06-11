@@ -1,4 +1,4 @@
-import { type GameState, GamePhase, CONSTANTS, ECONOMY } from './GameState';
+import { type GameState, GamePhase, CONSTANTS, ECONOMY, PLAY_PHASES } from './GameState';
 import { InputManager, GameAction } from './InputManager';
 import { TerrainSystem } from '../systems/TerrainSystem';
 import { PhysicsSystem } from '../systems/PhysicsSystem';
@@ -48,7 +48,7 @@ export class GameEngine {
 
         // Initialize State
         this.state = {
-            phase: GamePhase.SETUP,
+            phase: GamePhase.MENU,
             tanks: [],
             projectiles: [],
             explosions: [],
@@ -136,8 +136,24 @@ export class GameEngine {
             this.soundManager.playUI();
         };
         this.uiManager.onRestartGame = () => {
-            console.log("Restarting Game...");
+            this.state.phase = GamePhase.MENU;
+            this.soundManager.playUI();
+        };
+        this.uiManager.onNewGame = () => {
             this.state.phase = GamePhase.SETUP;
+            this.soundManager.playUI();
+        };
+        this.uiManager.onTogglePause = () => {
+            if (!PLAY_PHASES.includes(this.state.phase)) return;
+            this.state.isPaused = !this.state.isPaused;
+            this.soundManager.playUI();
+        };
+        this.uiManager.onQuitToMenu = () => {
+            // Best effort: persists when the game is in a stable phase;
+            // otherwise the turn-start autosave already covers it
+            this.saveSystem.save(this.state, this.terrainSystem, this.economySystem);
+            this.state.isPaused = false;
+            this.state.phase = GamePhase.MENU;
             this.soundManager.playUI();
         };
 
@@ -175,6 +191,9 @@ export class GameEngine {
     }
 
     private update(dt: number) {
+        // Paused: freeze the simulation entirely (rendering continues)
+        if (this.state.isPaused) return;
+
         // 1. Process Input
         if (this.state.phase === GamePhase.AIMING) {
             const currentTank = this.state.tanks[this.state.currentPlayerIndex];
