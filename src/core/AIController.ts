@@ -26,29 +26,41 @@ export interface AiDecision {
 
 // ---- Shared Web Worker (one instance for all AI controllers) ----------------
 
-let sharedWorker: Worker | null = null;
+// undefined = not yet attempted; null = creation failed; Worker = active
+let sharedWorker: Worker | null | undefined = undefined;
 let workerRequestId = 0;
 const pendingRequests = new Map<number, (res: SolveResponse) => void>();
 
-function getWorker(): Worker {
-    if (!sharedWorker) {
-        sharedWorker = new Worker(new URL('./aiWorker.ts', import.meta.url), { type: 'module' });
-        sharedWorker.onmessage = (e: MessageEvent<SolveResponse>) => {
+function getWorker(): Worker | null {
+    if (sharedWorker !== undefined) return sharedWorker;
+    try {
+        const w = new Worker(new URL('./aiWorker.ts', import.meta.url), { type: 'module' });
+        w.onmessage = (e: MessageEvent<SolveResponse>) => {
             const resolve = pendingRequests.get(e.data.id);
             if (resolve) {
                 pendingRequests.delete(e.data.id);
                 resolve(e.data);
             }
         };
+        w.onerror = () => { sharedWorker = null; };
+        sharedWorker = w;
+    } catch {
+        // Module workers unsupported (e.g. iOS < 15) — fall back to heuristic AI
+        sharedWorker = null;
     }
     return sharedWorker;
 }
 
 function solveAsync(req: Omit<SolveRequest, 'id'>): Promise<SolveResponse> {
+    const worker = getWorker();
+    if (!worker) {
+        // Worker unavailable — return null solution so callers fall back to moronShot
+        return Promise.resolve({ id: 0, angle: null, power: null });
+    }
     return new Promise(resolve => {
         const id = workerRequestId++;
         pendingRequests.set(id, resolve);
-        getWorker().postMessage({ ...req, id });
+        worker.postMessage({ ...req, id });
     });
 }
 

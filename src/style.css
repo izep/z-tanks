@@ -172,6 +172,7 @@ body {
   user-select: none;
   box-shadow: 0 4px 12px rgba(0,0,0,0.3);
   -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
 }
 
 .btn-circle:active {
@@ -232,6 +233,8 @@ body {
     color: rgba(255,255,255,0.8);
     transition: all 0.1s;
     -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+    user-select: none;
 }
 
 .d-pad-btn:active {

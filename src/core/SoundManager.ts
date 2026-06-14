@@ -88,9 +88,9 @@ export class SoundManager {
         else this.stopMusic();
     }
 
-    private resume() {
-        if (this.ctx.state === 'suspended') {
-            this.ctx.resume();
+    public resume() {
+        if (this.ctx && this.ctx.state === 'suspended') {
+            this.ctx.resume().catch(() => {});
         }
     }
 

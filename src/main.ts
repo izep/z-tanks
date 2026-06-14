@@ -49,6 +49,16 @@ const init = () => {
 
   new TouchControls(engine.inputManager);
 
+  // iOS requires AudioContext to be resumed inside a user gesture.
+  // Register a one-shot capture listener so it fires before any other handler.
+  const unlockAudio = () => {
+    engine.soundManager.resume();
+    document.removeEventListener('touchstart', unlockAudio, true);
+    document.removeEventListener('mousedown', unlockAudio, true);
+  };
+  document.addEventListener('touchstart', unlockAudio, { capture: true, passive: true });
+  document.addEventListener('mousedown', unlockAudio, { capture: true });
+
   console.log("Game Started");
 };
 

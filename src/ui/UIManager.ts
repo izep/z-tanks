@@ -150,77 +150,91 @@ export class UIManager {
         // Setup Screen
         const setupDiv = document.createElement('div');
         setupDiv.id = 'setup-layer';
-        setupDiv.style.cssText = 'display: none; position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: #222; color: white; padding: 40px; text-align: center; pointer-events: auto; z-index: 2000;';
+        // flex column: header | scrollable body | sticky footer — makes START GAME always reachable on mobile
+        setupDiv.style.cssText = 'display: none; flex-direction: column; position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: #222; color: white; pointer-events: auto; z-index: 2000; box-sizing: border-box;';
         setupDiv.innerHTML = `
-            <h1>Z-Tanks Setup</h1>
-            <div style="margin: 20px;">
-                <label>Player Count: <input type="number" id="setup-p-count" value="2" min="2" max="6" style="padding: 5px; width: 50px; text-align: center;"></label>
-            </div>
-            <div id="setup-players" style="margin: 20px; display: grid; grid-template-columns: 1fr; gap: 10px; max-height: 400px; overflow-y: auto;"></div>
-            
-            <div style="margin: 20px;">
-                 <label>Rounds: <input type="number" id="setup-rounds" value="10" min="1" max="20" style="padding: 5px; width: 50px; text-align: center;"></label>
-                 <br><br>
-                 <label>Borders:
-                    <select id="setup-borders" style="padding: 5px;">
-                        <option value="normal">Normal</option>
-                        <option value="wrap">Wrap Around</option>
-                        <option value="bounce">Bounce</option>
-                        <option value="concrete">Concrete (Explode)</option>
-                    </select>
-                 </label>
-                 <br><br>
-                 <label>Wind:
-                    <select id="setup-wind" style="padding: 5px;">
-                        <option value="none">None</option>
-                        <option value="normal" selected>Normal</option>
-                        <option value="strong">Strong</option>
-                    </select>
-                 </label>
-                 <label style="margin-left: 15px;">Gravity:
-                    <select id="setup-gravity" style="padding: 5px;">
-                        <option value="low">Low (Moon)</option>
-                        <option value="normal" selected>Normal</option>
-                        <option value="high">High</option>
-                    </select>
-                 </label>
-                 <br><br>
-                 <label>Starting Cash: $<input type="number" id="setup-cash" value="10000" min="0" max="1000000" step="1000" style="padding: 5px; width: 90px; text-align: center;"></label>
-                 <br><br>
-                 <label>Market Volatility:
-                    <select id="setup-volatility" style="padding: 5px;">
-                        <option value="none">None</option>
-                        <option value="low" selected>Low</option>
-                        <option value="medium">Medium</option>
-                        <option value="high">High</option>
-                    </select>
-                 </label>
-                 <label style="margin-left: 15px;">Interest:
-                    <select id="setup-interest" style="padding: 5px;">
-                        <option value="0">0%</option>
-                        <option value="0.05">5%</option>
-                        <option value="0.10" selected>10%</option>
-                        <option value="0.20">20%</option>
-                    </select>
-                 </label>
-                 <label style="margin-left: 15px;">Arms Level:
-                    <select id="setup-arms" style="padding: 5px;">
-                        <option value="1">1 - Basic</option>
-                        <option value="2">2 - Conventional</option>
-                        <option value="3">3 - Advanced</option>
-                        <option value="4" selected>4 - Unrestricted</option>
-                    </select>
-                 </label>
-                 <br><br>
-                 <label><input type="checkbox" id="setup-talking" checked> Talking Tanks</label>
-                 <label style="margin-left: 15px;"><input type="checkbox" id="setup-test-mode"> Test Mode (100 Weapons)</label>
-                 <br><br>
-                 <label>Volume: <input type="range" id="setup-volume" min="0" max="100" value="60" style="vertical-align: middle;"></label>
-                 <label style="margin-left: 15px;"><input type="checkbox" id="setup-music" checked> Music</label>
+            <!-- Header -->
+            <div style="padding: 12px 20px 8px; text-align: center; flex-shrink: 0; border-bottom: 1px solid #444;">
+                <h1 style="margin: 0; font-size: clamp(18px, 4vw, 28px);">Z-Tanks Setup</h1>
             </div>
 
-            <button id="btn-start-game" style="padding: 10px 20px; font-size: 20px; cursor: pointer;">START GAME</button>
-            <button id="btn-continue-game" style="display: none; margin-left: 15px; padding: 10px 20px; font-size: 20px; cursor: pointer; background: #2a6; color: white; border: 1px solid #4c8;">CONTINUE SAVED GAME</button>
+            <!-- Scrollable settings body -->
+            <div style="flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; padding: 12px 20px; box-sizing: border-box; text-align: center;">
+                <div style="margin-bottom: 10px;">
+                    <label>Players: <input type="number" id="setup-p-count" value="2" min="2" max="6" style="padding: 8px; width: 55px; text-align: center; font-size: 16px; min-height: 40px;"></label>
+                </div>
+                <div id="setup-players" style="margin-bottom: 12px; display: grid; grid-template-columns: 1fr; gap: 8px;"></div>
+
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 10px; text-align: left; margin-bottom: 10px;">
+                    <label style="display: flex; flex-direction: column; gap: 4px;">Rounds
+                        <input type="number" id="setup-rounds" value="10" min="1" max="20" style="padding: 8px; font-size: 16px; min-height: 40px; width: 80px;">
+                    </label>
+                    <label style="display: flex; flex-direction: column; gap: 4px;">Borders
+                        <select id="setup-borders" style="padding: 8px; font-size: 16px; min-height: 40px;">
+                            <option value="normal">Normal</option>
+                            <option value="wrap">Wrap Around</option>
+                            <option value="bounce">Bounce</option>
+                            <option value="concrete">Concrete (Explode)</option>
+                        </select>
+                    </label>
+                    <label style="display: flex; flex-direction: column; gap: 4px;">Wind
+                        <select id="setup-wind" style="padding: 8px; font-size: 16px; min-height: 40px;">
+                            <option value="none">None</option>
+                            <option value="normal" selected>Normal</option>
+                            <option value="strong">Strong</option>
+                        </select>
+                    </label>
+                    <label style="display: flex; flex-direction: column; gap: 4px;">Gravity
+                        <select id="setup-gravity" style="padding: 8px; font-size: 16px; min-height: 40px;">
+                            <option value="low">Low (Moon)</option>
+                            <option value="normal" selected>Normal</option>
+                            <option value="high">High</option>
+                        </select>
+                    </label>
+                    <label style="display: flex; flex-direction: column; gap: 4px;">Starting Cash ($)
+                        <input type="number" id="setup-cash" value="10000" min="0" max="1000000" step="1000" style="padding: 8px; font-size: 16px; min-height: 40px; width: 110px;">
+                    </label>
+                    <label style="display: flex; flex-direction: column; gap: 4px;">Market Volatility
+                        <select id="setup-volatility" style="padding: 8px; font-size: 16px; min-height: 40px;">
+                            <option value="none">None</option>
+                            <option value="low" selected>Low</option>
+                            <option value="medium">Medium</option>
+                            <option value="high">High</option>
+                        </select>
+                    </label>
+                    <label style="display: flex; flex-direction: column; gap: 4px;">Interest Rate
+                        <select id="setup-interest" style="padding: 8px; font-size: 16px; min-height: 40px;">
+                            <option value="0">0%</option>
+                            <option value="0.05">5%</option>
+                            <option value="0.10" selected>10%</option>
+                            <option value="0.20">20%</option>
+                        </select>
+                    </label>
+                    <label style="display: flex; flex-direction: column; gap: 4px;">Arms Level
+                        <select id="setup-arms" style="padding: 8px; font-size: 16px; min-height: 40px;">
+                            <option value="1">1 - Basic</option>
+                            <option value="2">2 - Conventional</option>
+                            <option value="3">3 - Advanced</option>
+                            <option value="4" selected>4 - Unrestricted</option>
+                        </select>
+                    </label>
+                </div>
+
+                <div style="display: flex; flex-wrap: wrap; gap: 16px; justify-content: center; margin-bottom: 10px;">
+                    <label style="display: flex; align-items: center; gap: 6px; min-height: 40px;"><input type="checkbox" id="setup-talking" checked style="width: 20px; height: 20px;"> Talking Tanks</label>
+                    <label style="display: flex; align-items: center; gap: 6px; min-height: 40px;"><input type="checkbox" id="setup-test-mode" style="width: 20px; height: 20px;"> Test Mode (100 Weapons)</label>
+                    <label style="display: flex; align-items: center; gap: 6px; min-height: 40px;"><input type="checkbox" id="setup-music" checked style="width: 20px; height: 20px;"> Music</label>
+                </div>
+                <div style="margin-bottom: 10px;">
+                    <label>Volume: <input type="range" id="setup-volume" min="0" max="100" value="60" style="vertical-align: middle; width: clamp(120px, 40vw, 220px);"></label>
+                </div>
+            </div>
+
+            <!-- Sticky footer — always visible, START GAME never scrolls off screen -->
+            <div style="flex-shrink: 0; padding: 12px 20px; background: #1a1a1a; border-top: 1px solid #444; text-align: center;">
+                <button id="btn-start-game" style="padding: 12px 28px; font-size: 20px; cursor: pointer; background: gold; color: black; border: none; border-radius: 6px; font-weight: bold; min-height: 48px; touch-action: manipulation;">START GAME</button>
+                <button id="btn-continue-game" style="display: none; margin-left: 12px; padding: 12px 20px; font-size: 18px; cursor: pointer; background: #2a6; color: white; border: 1px solid #4c8; border-radius: 6px; min-height: 48px; touch-action: manipulation;">CONTINUE SAVED GAME</button>
+            </div>
         `;
         this.container.appendChild(setupDiv);
         this.setupContainer = setupDiv;
@@ -228,14 +242,17 @@ export class UIManager {
         // Main Menu
         const menuDiv = document.createElement('div');
         menuDiv.id = 'menu-layer';
-        menuDiv.style.cssText = 'display: none; position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: linear-gradient(to bottom, #0a0a1a 0%, #1a1a2e 60%, #3d2b1f 100%); color: white; text-align: center; pointer-events: auto; z-index: 2500; flex-direction: column; align-items: center; justify-content: center;';
+        // overflow-y: auto so menu is scrollable on very small screens; inner wrapper is centered
+        menuDiv.style.cssText = 'display: none; position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: linear-gradient(to bottom, #0a0a1a 0%, #1a1a2e 60%, #3d2b1f 100%); color: white; text-align: center; pointer-events: auto; z-index: 2500; flex-direction: column; align-items: center; justify-content: center; overflow-y: auto; -webkit-overflow-scrolling: touch;';
         menuDiv.innerHTML = `
-            <div style="margin-bottom: 8px;"><img src="/z-logo.svg" alt="Z-Tanks" style="width: 100px; height: 100px; filter: drop-shadow(0 0 16px #1ebfe0);"></div>
-            <h1 style="font-size: 56px; background: linear-gradient(135deg, #4040e0 0%, #1ebfe0 40%, #00d4a0 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; margin-bottom: 4px; text-shadow: none; font-weight: 900; letter-spacing: 2px;">Z-TANKS</h1>
-            <div style="color: #aaa; margin-bottom: 40px; letter-spacing: 3px;">A SCORCHED EARTH TRIBUTE</div>
-            <button id="btn-menu-new" class="menu-btn" style="display: block; width: 280px; margin: 8px auto; padding: 14px; font-size: 20px; cursor: pointer; background: gold; color: black; border: none; border-radius: 6px; font-weight: bold;">NEW GAME</button>
-            <button id="btn-menu-continue" class="menu-btn" style="display: none; width: 280px; margin: 8px auto; padding: 14px; font-size: 20px; cursor: pointer; background: #2a6; color: white; border: 1px solid #4c8; border-radius: 6px; font-weight: bold;">CONTINUE SAVED GAME</button>
-            <button id="btn-menu-help" class="menu-btn" style="display: block; width: 280px; margin: 8px auto; padding: 14px; font-size: 20px; cursor: pointer; background: #333; color: white; border: 1px solid #555; border-radius: 6px;">HOW TO PLAY</button>
+            <div style="padding: 20px 20px 10px; width: 100%; max-width: 400px; box-sizing: border-box;">
+                <div style="margin-bottom: 6px;"><img src="/z-logo.svg" alt="Z-Tanks" style="width: clamp(60px, 12vw, 100px); height: clamp(60px, 12vw, 100px); filter: drop-shadow(0 0 16px #1ebfe0);"></div>
+                <h1 style="font-size: clamp(32px, 8vw, 56px); background: linear-gradient(135deg, #4040e0 0%, #1ebfe0 40%, #00d4a0 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; margin-bottom: 2px; text-shadow: none; font-weight: 900; letter-spacing: 2px;">Z-TANKS</h1>
+                <div style="color: #aaa; margin-bottom: clamp(16px, 4vh, 36px); letter-spacing: 3px; font-size: clamp(10px, 2vw, 14px);">A SCORCHED EARTH TRIBUTE</div>
+                <button id="btn-menu-new" class="menu-btn" style="display: block; width: 100%; max-width: 280px; margin: 8px auto; padding: 14px; font-size: 20px; cursor: pointer; background: gold; color: black; border: none; border-radius: 6px; font-weight: bold; min-height: 52px; touch-action: manipulation;">NEW GAME</button>
+                <button id="btn-menu-continue" class="menu-btn" style="display: none; width: 100%; max-width: 280px; margin: 8px auto; padding: 14px; font-size: 20px; cursor: pointer; background: #2a6; color: white; border: 1px solid #4c8; border-radius: 6px; font-weight: bold; min-height: 52px; touch-action: manipulation;">CONTINUE SAVED GAME</button>
+                <button id="btn-menu-help" class="menu-btn" style="display: block; width: 100%; max-width: 280px; margin: 8px auto; padding: 14px; font-size: 20px; cursor: pointer; background: #333; color: white; border: 1px solid #555; border-radius: 6px; min-height: 52px; touch-action: manipulation;">HOW TO PLAY</button>
+            </div>
         `;
         this.container.appendChild(menuDiv);
 
@@ -299,7 +316,9 @@ export class UIManager {
         document.getElementById('btn-pause-resume')?.addEventListener('click', () => this.onTogglePause());
         document.getElementById('btn-pause-help')?.addEventListener('click', () => this.showHelp(true));
         document.getElementById('btn-pause-quit')?.addEventListener('click', () => this.onQuitToMenu());
-        document.getElementById('btn-pause')?.addEventListener('click', () => this.onTogglePause());
+        const pauseBtn = document.getElementById('btn-pause');
+        pauseBtn?.addEventListener('click', () => this.onTogglePause());
+        pauseBtn?.addEventListener('touchend', (e) => { e.preventDefault(); this.onTogglePause(); }, { passive: false });
         document.getElementById('pause-volume')?.addEventListener('input', (e) => {
             this.onAudioChange({ volume: parseInt((e.target as HTMLInputElement).value) / 100 });
         });
@@ -326,19 +345,19 @@ export class UIManager {
             playersDiv.innerHTML = '';
             for (let i = 0; i < count; i++) {
                 const row = document.createElement('div');
-                row.style.cssText = 'display: flex; gap: 10px; align-items: center; justify-content: center; background: #333; padding: 10px; border-radius: 5px;';
+                row.style.cssText = 'display: flex; flex-wrap: wrap; gap: 8px; align-items: center; justify-content: center; background: #333; padding: 10px; border-radius: 5px;';
 
                 // Name
                 row.innerHTML = `
-                    <span style="font-weight: bold; width: 20px;">${i + 1}</span>
-                    <input type="text" id="p-name-${i}" value="Player ${i + 1}" placeholder="Name" style="padding: 5px; width: 100px;">
-                    
-                    <select id="p-type-${i}" style="padding: 5px;">
+                    <span style="font-weight: bold; min-width: 20px;">${i + 1}</span>
+                    <input type="text" id="p-name-${i}" value="Player ${i + 1}" placeholder="Name" style="padding: 8px; width: 90px; font-size: 15px; min-height: 40px;">
+
+                    <select id="p-type-${i}" style="padding: 8px; font-size: 15px; min-height: 40px;">
                         <option value="human" ${i === 0 ? 'selected' : ''}>Human</option>
                         <option value="ai" ${i > 0 ? 'selected' : ''}>AI</option>
                     </select>
 
-                    <select id="p-ai-style-${i}" style="padding: 5px; display: ${i > 0 ? 'block' : 'none'};">
+                    <select id="p-ai-style-${i}" style="padding: 8px; font-size: 15px; min-height: 40px; display: ${i > 0 ? 'block' : 'none'};">
                         <option value="MORON">Moron</option>
                         <option value="SHOOTER">Shooter</option>
                         <option value="POOLSHARK">Poolshark</option>
@@ -349,8 +368,8 @@ export class UIManager {
                         <option value="UNKNOWN">Unknown</option>
                     </select>
 
-                    <label>Tank: 
-                        <select id="p-variant-${i}" style="padding: 5px;">
+                    <label style="display: flex; align-items: center; gap: 4px;">Tank:
+                        <select id="p-variant-${i}" style="padding: 8px; font-size: 15px; min-height: 40px;">
                             <option value="0">Classic</option>
                             <option value="1">Heavy</option>
                             <option value="2">Sci-Fi</option>
@@ -381,13 +400,16 @@ export class UIManager {
             this.onContinueGame();
         });
 
-        // Audio controls
+        // Audio controls — bind both click and touchstart so div works on iOS
         const muteBtn = document.getElementById('btn-mute');
-        muteBtn?.addEventListener('click', () => {
+        const handleMuteToggle = (e: Event) => {
+            e.preventDefault();
             const muted = !this.getAudioSettings().muted;
             this.onAudioChange({ muted });
-            muteBtn.innerText = muted ? '🔇' : '🔊';
-        });
+            if (muteBtn) muteBtn.innerText = muted ? '🔇' : '🔊';
+        };
+        muteBtn?.addEventListener('click', handleMuteToggle);
+        muteBtn?.addEventListener('touchend', handleMuteToggle, { passive: false });
         document.getElementById('setup-volume')?.addEventListener('input', (e) => {
             this.onAudioChange({ volume: parseInt((e.target as HTMLInputElement).value) / 100 });
         });
@@ -484,7 +506,7 @@ export class UIManager {
             if (controlsLeft) controlsLeft.style.display = 'none';
             if (controlsRight) controlsRight.style.display = 'none';
         } else if (state.phase === 'SETUP') {
-            this.setupContainer!.style.display = 'block';
+            this.setupContainer!.style.display = 'flex';
             this.shopContainer!.style.display = 'none';
             if (hud) hud.style.display = 'none';
             if (controlsLeft) controlsLeft.style.display = 'none';
