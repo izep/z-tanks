@@ -1,6 +1,9 @@
 import { GamePhase, type GameState } from '../core/GameState';
 import { WEAPON_ORDER, WEAPONS, GUIDANCE_ORDER, getArmsLevel } from '../core/WeaponData';
 
+// Vite injects the configured base path; use it for public-folder assets
+const BASE = import.meta.env.BASE_URL;
+
 export class UIManager {
     private container: HTMLElement;
     private shopContainer: HTMLDivElement | null = null;
@@ -246,7 +249,7 @@ export class UIManager {
         menuDiv.style.cssText = 'display: none; position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: linear-gradient(to bottom, #0a0a1a 0%, #1a1a2e 60%, #3d2b1f 100%); color: white; text-align: center; pointer-events: auto; z-index: 2500; flex-direction: column; align-items: center; justify-content: center; overflow-y: auto; -webkit-overflow-scrolling: touch;';
         menuDiv.innerHTML = `
             <div style="padding: 20px 20px 10px; width: 100%; max-width: 400px; box-sizing: border-box;">
-                <div style="margin-bottom: 6px;"><img src="/z-logo.svg" alt="Z-Tanks" style="width: clamp(60px, 12vw, 100px); height: clamp(60px, 12vw, 100px); filter: drop-shadow(0 0 16px #1ebfe0);"></div>
+                <div style="margin-bottom: 6px;"><img src="${BASE}z-logo.svg" alt="Z-Tanks" style="width: clamp(60px, 12vw, 100px); height: clamp(60px, 12vw, 100px); filter: drop-shadow(0 0 16px #1ebfe0);"></div>
                 <h1 style="font-size: clamp(32px, 8vw, 56px); background: linear-gradient(135deg, #4040e0 0%, #1ebfe0 40%, #00d4a0 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; margin-bottom: 2px; text-shadow: none; font-weight: 900; letter-spacing: 2px;">Z-TANKS</h1>
                 <div style="color: #aaa; margin-bottom: clamp(16px, 4vh, 36px); letter-spacing: 3px; font-size: clamp(10px, 2vw, 14px);">A SCORCHED EARTH TRIBUTE</div>
                 <button id="btn-menu-new" class="menu-btn" style="display: block; width: 100%; max-width: 280px; margin: 8px auto; padding: 14px; font-size: 20px; cursor: pointer; background: gold; color: black; border: none; border-radius: 6px; font-weight: bold; min-height: 52px; touch-action: manipulation;">NEW GAME</button>
