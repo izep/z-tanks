@@ -43,6 +43,19 @@ export class UIManager {
         `;
         document.body.appendChild(overlay);
 
+        // PWA install hint — shown in landscape when running in browser (not standalone)
+        const isStandalone = (typeof window.matchMedia === 'function' && window.matchMedia('(display-mode: standalone)').matches)
+            || (navigator as any).standalone === true;
+        if (!isStandalone) {
+            const hint = document.createElement('div');
+            hint.id = 'pwa-hint';
+            hint.style.cssText = 'position: fixed; bottom: 0; left: 0; right: 0; background: rgba(0,0,0,0.75); color: #ccc; font-size: 12px; text-align: center; padding: 4px 8px; z-index: 200; pointer-events: none;';
+            hint.textContent = 'Tip: Add to Home Screen for fullscreen play with no browser chrome';
+            document.body.appendChild(hint);
+            // Dismiss after 8 seconds
+            setTimeout(() => hint.remove(), 8000);
+        }
+
         const check = () => {
             const portrait = window.innerWidth < window.innerHeight;
             overlay.style.display = portrait ? 'flex' : 'none';

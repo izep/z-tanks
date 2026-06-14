@@ -130,33 +130,32 @@ body {
 /* Controls */
 .control-cluster {
   position: absolute;
-  padding: 20px;
+  padding: clamp(6px, 2dvh, 20px);
   display: flex;
-  gap: 24px;
+  gap: clamp(10px, 2.5dvh, 24px);
   z-index: 100;
 }
 
 .bottom-left {
-  bottom: 20px;
-  left: 20px;
+  bottom: 0;
+  left: 0;
   align-items: flex-end;
-  /* Push up/in for safe area */
-  margin-bottom: var(--safe-bottom);
-  margin-left: var(--safe-left);
+  padding-bottom: max(8px, var(--safe-bottom));
+  padding-left: max(8px, var(--safe-left));
 }
 
 .bottom-right {
-  bottom: 20px;
-  right: 20px;
+  bottom: 0;
+  right: 0;
   align-items: flex-end;
-  margin-bottom: var(--safe-bottom);
-  margin-right: var(--safe-right);
+  padding-bottom: max(8px, var(--safe-bottom));
+  padding-right: max(8px, var(--safe-right));
 }
 
-/* Circular Buttons */
+/* Circular Buttons — scale with viewport height so they fit short landscape screens */
 .btn-circle {
-  width: 72px;
-  height: 72px;
+  width: clamp(44px, 10dvh, 72px);
+  height: clamp(44px, 10dvh, 72px);
   border-radius: 50%;
   border: 1px solid rgba(255, 255, 255, 0.15);
   background: rgba(30, 30, 40, 0.5);
@@ -175,6 +174,10 @@ body {
   touch-action: manipulation;
 }
 
+.btn-circle i {
+  font-size: clamp(16px, 4dvh, 32px) !important;
+}
+
 .btn-circle:active {
   transform: scale(0.92);
   background: rgba(255, 255, 255, 0.2);
@@ -182,11 +185,11 @@ body {
 }
 
 .btn-large {
-  width: 90px;
-  height: 90px;
+  width: clamp(56px, 13dvh, 90px);
+  height: clamp(56px, 13dvh, 90px);
   background: rgba(220, 40, 40, 0.7);
   border-color: rgba(255, 100, 100, 0.4);
-  font-size: 24px;
+  font-size: clamp(16px, 5dvh, 24px);
 }
 
 .btn-blue {
@@ -204,17 +207,17 @@ body {
     border-color: rgba(100, 255, 150, 0.4);
 }
 
-/* D-Pad Layout - Optimized for Thumb */
+/* D-Pad — scales with dvh so it fits inside short landscape viewports */
 .d-pad-grid {
     display: grid;
     grid-template-columns: 1fr 1fr 1fr;
     grid-template-rows: 1fr 1fr 1fr;
-    gap: 8px;
-    width: 180px; /* Larger for touch */
-    height: 180px;
+    gap: clamp(4px, 1dvh, 8px);
+    width: clamp(110px, 28dvh, 180px);
+    height: clamp(110px, 28dvh, 180px);
     background: rgba(20, 20, 20, 0.3);
-    border-radius: 50%; /* Circle background behind D-pad */
-    padding: 10px;
+    border-radius: 50%;
+    padding: clamp(6px, 1.5dvh, 10px);
     backdrop-filter: blur(4px);
     border: 1px solid rgba(255,255,255,0.05);
 }
@@ -224,17 +227,44 @@ body {
     height: 100%;
     background: rgba(255, 255, 255, 0.08);
     border: 1px solid rgba(255, 255, 255, 0.05);
-    border-radius: 12px;
+    border-radius: clamp(6px, 1.5dvh, 12px);
     display: flex;
     align-items: center;
     justify-content: center;
     cursor: pointer;
-    font-size: 24px;
+    font-size: clamp(14px, 4dvh, 24px);
     color: rgba(255,255,255,0.8);
     transition: all 0.1s;
     -webkit-tap-highlight-color: transparent;
     touch-action: manipulation;
     user-select: none;
+}
+
+/* Compact HUD on short landscape screens (phone in browser with chrome) */
+@media (max-height: 420px) {
+    #hud.hud-panel {
+        padding: 7px 10px;
+        min-width: unset;
+        width: clamp(130px, 22vw, 180px);
+    }
+    #hud .stat-row {
+        margin-bottom: 2px;
+        font-size: 11px;
+    }
+    #hud .stat-label {
+        font-size: 10px;
+        gap: 4px;
+    }
+    #hud .stat-value {
+        font-size: 11px;
+    }
+    /* Player name heading in the HUD */
+    #hud > div:first-child {
+        margin-bottom: 6px;
+    }
+    #p-name {
+        font-size: 14px !important;
+    }
 }
 
 .d-pad-btn:active {
