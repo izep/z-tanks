@@ -27,7 +27,30 @@ export class UIManager {
     constructor() {
         this.container = document.getElementById('ui-layer')!;
         this.setupBaseUI();
+        this.setupRotateOverlay();
         this.bindLongPressControls();
+    }
+
+    private setupRotateOverlay() {
+        const overlay = document.createElement('div');
+        overlay.id = 'rotate-overlay';
+        overlay.style.cssText = 'display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #000; color: white; z-index: 9999; flex-direction: column; align-items: center; justify-content: center; text-align: center; gap: 16px;';
+        overlay.innerHTML = `
+            <div style="font-size: 72px; animation: spin 2s linear infinite;">↻</div>
+            <h2 style="margin: 0; font-size: 24px;">Rotate Your Device</h2>
+            <p style="margin: 0; color: #aaa; font-size: 16px;">Z-Tanks is played in landscape mode</p>
+            <style>@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }</style>
+        `;
+        document.body.appendChild(overlay);
+
+        const check = () => {
+            const portrait = window.innerWidth < window.innerHeight;
+            overlay.style.display = portrait ? 'flex' : 'none';
+        };
+
+        window.addEventListener('resize', check, { passive: true });
+        window.addEventListener('orientationchange', () => setTimeout(check, 100), { passive: true });
+        check();
     }
 
     private setupBaseUI() {

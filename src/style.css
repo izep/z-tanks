@@ -271,6 +271,11 @@ body {
   background: rgba(255,255,255,0.3); 
 }
 
+/* Portrait guard — game requires landscape */
+@media (orientation: portrait) {
+    #rotate-overlay { display: flex !important; }
+}
+
 /* Shop Overlay Styling */
 #shop-layer, #setup-layer {
     backdrop-filter: blur(20px);
