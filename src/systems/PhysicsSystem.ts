@@ -831,9 +831,13 @@ export class PhysicsSystem {
         const damaged = new Set<number>();
         let x = startX;
         let y = startY;
+        let endX = startX;
+        let endY = startY;
         const step = 4;
 
         while (x >= 0 && x <= CONSTANTS.SCREEN_WIDTH && y >= -50 && y <= CONSTANTS.SCREEN_HEIGHT) {
+            endX = x; endY = y;
+
             // Cut through terrain (narrow channel)
             if (this.terrainSystem.isSolid(x, y)) {
                 this.terrainSystem.explode(state, x, y, 4);
@@ -853,24 +857,30 @@ export class PhysicsSystem {
             y += dirY * step;
         }
 
-        tank.lastShotImpact = { x, y };
+        tank.lastShotImpact = { x: endX, y: endY };
 
-        // Beam visual: short-lived flashes along the path
-        const beamLength = Math.sqrt((x - startX) ** 2 + (y - startY) ** 2);
-        const segments = Math.max(2, Math.floor(beamLength / 30));
-        for (let i = 0; i <= segments; i++) {
-            const t = i / segments;
-            state.explosions.push({
-                id: Math.random(),
-                x: startX + (x - startX) * t,
-                y: startY + (y - startY) * t,
-                maxRadius: 6,
-                currentRadius: 6,
-                duration: 0.25,
-                elapsed: 0,
-                color: WEAPONS['laser'].color
-            });
-        }
+        // Beam visual: bright smoke-trail line (much more visible than explosion dots)
+        if (!state.smokeTrails) state.smokeTrails = [];
+        const beamNow = Date.now();
+        const pts = [{ x: startX, y: startY }, { x: endX, y: endY }];
+
+        // Wide glow halo fades quickly
+        state.smokeTrails.push({
+            id: generateId(), points: pts,
+            color: '#FF9999', createdAt: beamNow, duration: 180, lineWidth: 14
+        });
+        // Core beam persists a bit longer
+        state.smokeTrails.push({
+            id: generateId(), points: pts,
+            color: '#FF2222', createdAt: beamNow, duration: 350, lineWidth: 4
+        });
+
+        // Impact flash at beam end
+        state.explosions.push({
+            id: Math.random(), x: endX, y: endY,
+            maxRadius: 18, currentRadius: 0, duration: 0.3, elapsed: 0,
+            color: WEAPONS['laser'].color
+        });
 
         this.soundManager.playExplosion();
         state.phase = GamePhase.EXPLOSION;
@@ -901,15 +911,23 @@ export class PhysicsSystem {
             }
         }
 
+        // Core white flash
         state.explosions.push({
-            id: Math.random(),
-            x: cx,
-            y: cy,
-            maxRadius: radius,
-            currentRadius: 0,
-            duration: 0.5,
-            elapsed: 0,
-            color: WEAPONS['plasma_blast'].color
+            id: Math.random(), x: cx, y: cy,
+            maxRadius: radius * 0.25, currentRadius: 0, duration: 0.2, elapsed: 0,
+            color: 'white'
+        });
+        // Middle cyan ring
+        state.explosions.push({
+            id: Math.random(), x: cx, y: cy,
+            maxRadius: radius * 0.6, currentRadius: 0, duration: 0.35, elapsed: 0,
+            color: '#88FFFF'
+        });
+        // Outer cyan ring
+        state.explosions.push({
+            id: Math.random(), x: cx, y: cy,
+            maxRadius: radius, currentRadius: 0, duration: 0.5, elapsed: 0,
+            color: '#00FFFF'
         });
 
         this.soundManager.playExplosion();

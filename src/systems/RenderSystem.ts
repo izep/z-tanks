@@ -375,25 +375,42 @@ export class RenderSystem {
 
     private drawSmokeTrail(trail: import('../core/GameState').SmokeTrailState, now: number) {
         if (trail.points.length < 2) return;
-        
+
         const age = now - trail.createdAt;
         const fadeProgress = age / trail.duration;
         const opacity = Math.max(0, 1 - fadeProgress);
-        
+        if (opacity <= 0) return;
+
+        const lw = trail.lineWidth ?? 3;
+
         this.ctx.save();
-        this.ctx.strokeStyle = trail.color;
         this.ctx.globalAlpha = opacity;
-        this.ctx.lineWidth = 3;
         this.ctx.lineCap = 'round';
         this.ctx.lineJoin = 'round';
-        
+
+        // Glow halo for thick beams (laser, plasma)
+        if (lw > 4) {
+            this.ctx.strokeStyle = 'white';
+            this.ctx.lineWidth = lw * 0.4;
+            this.ctx.globalAlpha = opacity * 0.6;
+            this.ctx.beginPath();
+            this.ctx.moveTo(trail.points[0].x, trail.points[0].y);
+            for (let i = 1; i < trail.points.length; i++) {
+                this.ctx.lineTo(trail.points[i].x, trail.points[i].y);
+            }
+            this.ctx.stroke();
+            this.ctx.globalAlpha = opacity;
+        }
+
+        this.ctx.strokeStyle = trail.color;
+        this.ctx.lineWidth = lw;
         this.ctx.beginPath();
         this.ctx.moveTo(trail.points[0].x, trail.points[0].y);
         for (let i = 1; i < trail.points.length; i++) {
             this.ctx.lineTo(trail.points[i].x, trail.points[i].y);
         }
         this.ctx.stroke();
-        
+
         this.ctx.restore();
     }
 }

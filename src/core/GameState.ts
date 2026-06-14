@@ -95,6 +95,7 @@ export interface SmokeTrailState {
   color: string;
   createdAt: number;
   duration: number; // ms
+  lineWidth?: number; // px, defaults to 3
 }
 
 // Phases where the simulation is running and pausing makes sense
