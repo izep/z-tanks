@@ -831,16 +831,25 @@ export class PhysicsSystem {
         const damaged = new Set<number>();
         let x = startX;
         let y = startY;
-        let endX = startX;
-        let endY = startY;
         const step = 4;
+
+        // Skip any underground segment at the muzzle (happens when aimed steeply downward)
+        let skipCount = 0;
+        while (this.terrainSystem.isSolid(x, y) && skipCount++ < 20) {
+            x += dirX * step;
+            y += dirY * step;
+        }
+
+        let endX = x;
+        let endY = y;
 
         while (x >= 0 && x <= CONSTANTS.SCREEN_WIDTH && y >= -50 && y <= CONSTANTS.SCREEN_HEIGHT) {
             endX = x; endY = y;
 
-            // Cut through terrain (narrow channel)
+            // Stop at terrain; carve a small entry crater
             if (this.terrainSystem.isSolid(x, y)) {
-                this.terrainSystem.explode(state, x, y, 4);
+                this.terrainSystem.explode(state, x, y, 6);
+                break;
             }
 
             for (const target of state.tanks) {
